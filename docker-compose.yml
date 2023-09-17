@@ -1,0 +1,46 @@
+version: '3.4'
+
+services:
+  mqtt-explorer:
+    image: smeagolworms4/mqtt-explorer
+    container_name: mqtt-explorer
+    ports:
+        - 4000:4000
+    volumes:
+        - ./mqtt-explorer/config:/mqtt-explorer/config
+    networks:
+        - mqtt
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    ports:
+        - 1883:1883
+        - 8883:8883
+        - 9001:9001
+    volumes:
+        - ./mosquitto/config:/mosquitto/config
+        - ./mosquitto/data:/mosquitto/data
+        - ./mosquitto/log:/mosquitto/log
+    networks:
+        - mqtt
+
+  tuya_mqtt.net:
+    image: ${DOCKER_REGISTRY-}tuya_mqtt.net
+    container_name: tuya_mqtt.net
+      
+    ports:
+      - 6667:6667/udp #needs to be published to receive encryped TUYA boradcasts 
+      - 6666:6666/udp #needs to be published to receive unencryped TUYA boradcasts 
+    build:
+      context: .
+      dockerfile: ./tuya_mqtt.net/Dockerfile
+    
+    networks:
+        - mqtt
+
+networks:
+
+  mqtt:
+    name: mqtt
+

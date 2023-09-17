@@ -1,0 +1,39 @@
+{
+  "ConnectionManager_connections": {
+    "mqtt.eclipse.org": {
+      "configVersion": 1,
+      "certValidation": false,
+      "clientId": "mqtt-explorer-04cf3aa7",
+      "id": "mqtt.eclipse.org",
+      "name": "mosquitto",
+      "encryption": false,
+      "subscriptions": [
+        {
+          "topic": "#",
+          "qos": 0
+        },
+        {
+          "topic": "$SYS/#",
+          "qos": 0
+        }
+      ],
+      "type": "mqtt",
+      "host": "mosquitto",
+      "port": 1883,
+      "protocol": "mqtt",
+      "changeSet": {
+        "password": "password"
+      },
+      "username": "admin",
+      "password": "password"
+    }
+  },
+  "Settings": {
+    "timeLocale": "de-DE",
+    "topicOrder": "none",
+    "highlightTopicUpdates": true,
+    "valueRendererDisplayMode": "diff",
+    "selectTopicWithMouseOver": false,
+    "theme": "light"
+  }
+}

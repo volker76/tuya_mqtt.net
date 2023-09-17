@@ -1,0 +1,268 @@
+﻿@page "/tuyadevices"
+@using com.clusterrr.TuyaNet;
+@using tuya_mqtt.net.Data
+@using tuya_mqtt.net.Services;
+@inject TuyaCommunicatorService TuyaService;
+@inject TuyaConnectedDeviceService TuyaConnectedDevices;
+@inject NavigationManager NavManager
+@inject BrowserService Browser;
+@inject IJSRuntime JS;
+@inject ISnackbar Snackbar;
+@inject ILogger<TuyaDevices> Logger;
+
+
+<PageTitle>Tuya Devices</PageTitle>
+
+<h1>Tuya Devices</h1>
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Server Status Overview</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Default" OnClick="GoSettings" />
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudText Class="h2">Server Status</MudText>
+        <TuyaServerStatus />
+    </MudCardContent>
+</MudCard>
+<MudExpansionPanels MultiExpansion="true" Class="pt-4">
+    <MudExpansionPanel @ref=_expansionList IsInitiallyExpanded=true Text="Scanned Network Devices">
+        <TuyaScannedDevices ScannedDevicesList="_tuyaScannedDevices" MonitoredDevices="_tuyaMonitoredDevices" OnClick="AddChangeTuyaDeviceFromScan" />
+    </MudExpansionPanel>
+    <div class="AddSection">
+    <MudExpansionPanel @ref=_expansionAdd IsInitiallyExpanded=false Text="Add/Change Connected Device">
+        <MudPaper>
+           
+            <MudStack Row="true" Class="align-center">
+                    <MudTextField @bind-Value="_tuyaDeviceIp" Label="Adress/IP" HelperText="Device IP in the local network" Variant="Variant.Text"></MudTextField>
+                    <MudButton Variant="Variant.Filled" Style="height: 40px" Color="Color.Primary" OnClick="TestTuyaDevice">Test Connection</MudButton>
+            </MudStack>
+            <MudStack Row="true" Class="align-top">
+                    <MudTextField @bind-Value="_tuyaId" Label="Device ID" HelperText="Device ID" Variant="Variant.Text"></MudTextField>
+                    <MudSelect @bind-Value="_tuyaProtocolVersion" ToStringFunc="@ConverterProtocolVersion" T="TuyaProtocolVersion" Label="Protocol version" Style="width:100px" Variant="Variant.Text">
+                        <MudSelectItem Value="@(TuyaProtocolVersion.V31)" />
+                        <MudSelectItem Value="@(TuyaProtocolVersion.V33)" />
+                    </MudSelect>
+            </MudStack>
+            <MudTextField @bind-Value="_tuyaLocalKey" Label="Local Key" HelperText="secure key of the device" Variant="Variant.Text"></MudTextField>
+
+            <MudTextField Class="mt-4" @bind-Value="_tuyaName" Label="Name" HelperText="Given name for MQTT" Variant="Variant.Text"></MudTextField>
+            
+            <MudSelect @bind-Value="_tuyaPolltimeValue" ToStringFunc="@ConvertTimeFunc" Dense="true" T="double" Label="Polling interval" Variant="Variant.Text">
+                @foreach (var t in _timeList)
+                {
+                    <MudSelectItem Value="@t"></MudSelectItem>
+                }
+            </MudSelect>
+         
+        </MudPaper>
+        <MudPaper Elevation="0" Class="d-flex justify-end pt-5 ar-2">
+            <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveAddTuyaDevice"  />
+        </MudPaper>
+        <MudOverlay Visible=@_isInWait DarkBackground="true" Absolute="true">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        </MudOverlay>
+    </MudExpansionPanel>
+    </div>
+    <MudExpansionPanel Text="Connected Devices & Data">
+        <TuyaMonitoredDevices MonitoredDevices="_tuyaMonitoredDevices" MonitoredData="_tuyaMonitoredData" OnClick="AddChangeTuyaDeviceFromMonitor" />
+    </MudExpansionPanel>
+</MudExpansionPanels>
+
+@code {
+    private bool _isInWait = false;
+    private MudExpansionPanel? _expansionList = null;
+    private MudExpansionPanel? _expansionAdd = null;
+
+    private readonly double[] _timeList = { 500,1,2,5,10,30,60 };
+
+    private IEnumerable<KeyValuePair<string, TuyaDeviceScanInfo>>? _tuyaScannedDevices;
+    private IReadOnlyDictionary<string, TuyaExtendedDeviceInformation>? _tuyaMonitoredDevices;
+    private IReadOnlyDictionary<string, List<DP>?>? _tuyaMonitoredData;
+    private TuyaProtocolVersion _tuyaProtocolVersion;
+
+    private string _tuyaDeviceIp = string.Empty;
+    private string _tuyaId = string.Empty;
+    private string _tuyaLocalKey = string.Empty;
+    private string _tuyaName = string.Empty;
+    private double _tuyaPolltimeValue = 10;
+
+    private static string ConverterProtocolVersion(TuyaProtocolVersion p)
+    {
+        switch (p)
+        {
+            case TuyaProtocolVersion.V31:
+                return "V 3.1";
+
+            case TuyaProtocolVersion.V33:
+                return "V 3.3";
+
+        }
+        return "";
+    }
+
+    private static string ConvertTimeFunc(double t)
+    {
+        if (t>=1)
+            return $"{t}s";
+        else
+            return $"{t*1000.0}ms";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Snackbar.Clear();
+        _tuyaScannedDevices = TuyaService.GetTuyaScanDevices();
+        _tuyaMonitoredDevices = TuyaConnectedDevices.GetMonitoredDevices();
+        _tuyaMonitoredData = TuyaConnectedDevices.GetMonitoredData();
+        TuyaConnectedDevices.OnDataUpdate += OnTuyaDataUpdate;
+        TuyaService.OnTuyaScannerUpdate += OnTuyaScannerUpdate;
+        await Browser.InitAsync(JS);
+    }
+
+    public void GoSettings()
+    {
+        NavManager.NavigateTo("/settings");
+    }
+
+    private async void AddChangeTuyaDeviceFromMonitor(string ID)
+    {
+        var devInfo = TuyaConnectedDevices.GetDevice(ID);
+        if (devInfo != null)
+        {
+
+            await AddItemsToForm(devInfo.Address, ID, devInfo.ProtocolVersion);
+        }
+    }
+
+    private async void AddChangeTuyaDeviceFromScan(TuyaDeviceScanInfo clicked)
+    {
+        var pv = TuyaProtocolVersion.V33;
+        if (clicked.Version == "3.1") pv = TuyaProtocolVersion.V31;
+        await AddItemsToForm(clicked.IP, clicked.GwId, pv);
+    }
+
+    private async Task AddItemsToForm(string addr, string id, TuyaProtocolVersion pv )
+    {
+        _tuyaDeviceIp = addr;
+        _tuyaId = id;
+        if (_tuyaMonitoredDevices?.ContainsKey(id) == true)
+        {
+            _tuyaLocalKey = _tuyaMonitoredDevices[id].Key;
+            if (_tuyaMonitoredDevices[id].hasName)
+            {
+                _tuyaName = _tuyaMonitoredDevices[id].Name;
+            }
+            else
+            {
+                _tuyaName = "";
+            }
+
+            _tuyaProtocolVersion = _tuyaMonitoredDevices[id].ProtocolVersion;
+        }
+        else
+        {
+            _tuyaLocalKey = "";
+            _tuyaName = "";
+            _tuyaProtocolVersion = pv;
+        }
+
+        _tuyaPolltimeValue = 5;
+
+        _expansionList?.Expand(false);
+        _expansionAdd?.Expand(true);
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(500);
+        Browser.ScrollClassIntoView("div.AddSection", 0).AndForget();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task TestTuyaDevice()
+    {
+        try
+        {
+            _isInWait = true;
+            StateHasChanged();
+            await Task.Delay(100);
+            var device = new Data.TuyaDeviceInformation() { Address = _tuyaDeviceIp, ID = _tuyaId, Key = _tuyaLocalKey, ProtocolVersion=_tuyaProtocolVersion };
+
+            var response = await TuyaService.TestConnect(device);
+            string message = $"<h3>connected to {_tuyaDeviceIp}</h3>";
+            if (response.Count > 0)
+            {
+                message += "data items:<table>";
+                foreach (var item in response)
+                {
+                    message += $"<tr><td>{item.DPNumber}:</td><td>{item.Value}</td></tr>";
+                }
+                message += "</table>";
+            }
+            Snackbar.Add(message, Severity.Success);
+        }
+        catch (Exception e)
+        {
+            Logger.LogWarning(e, $"Error testing {_tuyaDeviceIp}");
+            Snackbar.Add($"Error connecting <p>{e.Message}</p>", Severity.Error);
+        }
+        finally
+        {
+            _isInWait = false;
+            StateHasChanged();
+        };
+    }
+
+    private async Task SaveAddTuyaDevice()
+    {
+        if (_tuyaPolltimeValue <= 0)
+        {
+            Snackbar.Add($"No polling interval specified", Severity.Error);
+            await Task.Delay(100);
+            return;
+        }
+        try
+        {
+            _isInWait = true;
+            StateHasChanged();
+
+            var device = new Data.TuyaDeviceInformation() { Address = _tuyaDeviceIp, 
+                ID = _tuyaId, 
+                Key = _tuyaLocalKey
+            };
+            
+            _ = await TuyaService.TestConnect(device);
+
+            TuyaConnectedDevices.AddDevice(device, _tuyaName, TimeSpan.FromSeconds(_tuyaPolltimeValue));
+
+            Snackbar.Add($"Device saved", Severity.Success);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, $"Error adding device {_tuyaDeviceIp} {_tuyaId}");
+            Snackbar.Add($"Device error, test first", Severity.Error);
+        }
+        finally
+        {
+            _isInWait = false;
+            _tuyaMonitoredDevices = TuyaConnectedDevices.GetMonitoredDevices();
+            StateHasChanged();
+        };
+    }
+
+    private void OnTuyaScannerUpdate(object? sender, TuyaDeviceScanInfo item)
+    {
+        _tuyaScannedDevices = TuyaService.GetTuyaScanDevices();
+        _tuyaMonitoredDevices = TuyaConnectedDevices.GetMonitoredDevices();
+        InvokeAsync(StateHasChanged); //re render
+    }
+
+    private void OnTuyaDataUpdate(object? sender, EventArgs e)
+    {
+        _tuyaMonitoredData = TuyaConnectedDevices.GetMonitoredData();
+        InvokeAsync(StateHasChanged); //re render
+    }
+
+}

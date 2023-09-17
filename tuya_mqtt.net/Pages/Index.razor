@@ -1,0 +1,55 @@
+﻿@page "/"
+@using Markdig
+@using Microsoft.Extensions.FileProviders;
+@using System.Reflection;
+@inject ILogger<Index> Logger
+
+<PageTitle>tuya mqtt.net Status</PageTitle>
+
+<MudCard>
+    <MudCardContent>
+        <MudText> @((MarkupString)_readmeHtml) </MudText>
+    </MudCardContent>
+</MudCard>
+@code {
+    private MarkdownPipeline? _pipeline;
+    private string _readmeHtml = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var readme =String.Empty;
+
+        _pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+
+        var embeddedProvider = new EmbeddedFileProvider(Assembly.GetExecutingAssembly());
+        try
+        {
+            await using (var reader = embeddedProvider.GetFileInfo("README.md").CreateReadStream()) //README.md is an embedded resource
+            {
+                var sr = new StreamReader(reader);
+                readme = await sr.ReadToEndAsync();
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e,"");
+
+            _readmeHtml = "<b>An error occurred, cannot read README.md</b>";
+        }
+
+        try
+        {
+            if (!string.IsNullOrEmpty(readme))
+                _readmeHtml = Markdown.ToHtml(readme, _pipeline);
+            else
+                _readmeHtml = "<b>README.md is empty</b>";
+        }
+        catch (Exception)
+        {
+            _readmeHtml = "<b>An error occurred, cannot convert markdown in README.md</b>";
+        }
+    }
+
+
+
+}

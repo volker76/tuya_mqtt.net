@@ -1,0 +1,54 @@
+@using System.Diagnostics;
+@using tuya_mqtt.net.Helper;
+@using Microsoft.JSInterop;
+@using tuya_mqtt.net.Services;
+@using tuya_mqtt.net.Data;
+
+@inject LogNotificationService LogService;
+@inject ILogger<MqttBrokerStatus> Logger;
+@inject MqttClientService Service
+
+<table class="BrokerStatus">
+    <tr>
+        <td class="list1"><MudText Align="Align.Left">Host:</MudText></td>
+        <td class="list2"><MudText Align="Align.Left">@Service.Host</MudText></td>
+    </tr>
+    <tr>
+        <td class="list1"><MudText Align="Align.Left">status:</MudText></td>
+        <td class="list2">
+            @if (Service.IsConnected)
+            {
+                <MudText Align="Align.Left" Style="@($"color:{Colors.Green.Default};")">connected</MudText>                        
+            }
+            else
+            {
+                <MudText Align="Align.Left" Style="@($"color:{Colors.Red.Default};")">not connected</MudText>
+            }
+
+        </td>
+    </tr>
+    @if (Service.IsConnected)
+    {
+        <tr>
+            <td class="list1"><MudText Align="Align.Left">Broker:</MudText></td>
+            <td class="list2">
+                <MudText Align="Align.Left">@Service.BrokerVersion</MudText>
+            </td>
+        </tr>
+    }
+</table>
+
+@code{
+
+    protected override void OnInitialized()
+    {
+        Service.OnConnected += Update;
+        Service.OnDisconnected += Update;
+    }
+
+    private void Update(object? sender, int i)
+    {
+        this.InvokeAsync(StateHasChanged);
+    }
+
+}

@@ -1,0 +1,73 @@
+﻿@using com.clusterrr.TuyaNet
+@using tuya_mqtt.net.Data;
+<MudGrid>
+    <MudItem lg="3" md="2" sm="12"></MudItem>
+    <MudItem lg="6" md="8" sm="12">
+        @if (ScannedDevicesList?.Count() == 0)
+        {
+            <MudText Color=@Color.Secondary>No devices found.</MudText>
+        }
+        else
+        {
+            <MudPaper>
+                <MudList Dense=true Clickable=false >
+                    @foreach (var d in ScannedDevicesList!)
+                    {
+                        <MudListItem>
+                            <MudGrid Class="d-flex align-center">
+                                <MudItem xs="4" Class="d-flex justify-start">
+                                    <MudText>@d.Value.IP</MudText>
+                                </MudItem>
+                                <MudItem xs="6" Class="d-flex justify-start">
+                                    @if (ContainsMonitoredDevices(d.Value.GwId))
+                                    {
+                                        <MudText>@MonitoredDevices![d.Value.GwId]!.Name</MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudText>@d.Value.GwId</MudText>
+                                    }
+                                </MudItem>
+                                <MudItem xs="2" Class="d-flex justify-center">
+                                    @if (ContainsMonitoredDevices(d.Value.GwId))
+                                    {
+                                        <MudFab StartIcon="@Icons.Material.Outlined.ChangeCircle" Size="Size.Small" Tag="1" OnClick="() => { ClickAddChangeButton(d.Value).AndForget(); }"/>
+                                    }
+                                    else
+                                    {
+                                        <MudFab StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Tag="1" OnClick="() => { ClickAddChangeButton(d.Value).AndForget(); }"/>
+                                    }
+                                    
+                                </MudItem>
+                            </MudGrid>
+                        </MudListItem>
+                    }
+                </MudList>
+            </MudPaper>
+        }
+    </MudItem>
+    <MudItem lg="3" md="2" sm="12"></MudItem>
+</MudGrid>
+@code {
+    [ParameterAttribute]
+    public IEnumerable<KeyValuePair<string, TuyaDeviceScanInfo>>? ScannedDevicesList { get; set; }
+
+    /// <summary>
+    /// List click event.
+    /// </summary>
+    [Parameter]
+    public EventCallback<TuyaDeviceScanInfo> OnClick { get; set; }
+
+    [Parameter]
+    public IReadOnlyDictionary<string, TuyaExtendedDeviceInformation>? MonitoredDevices { get; set; }
+
+    private async Task ClickAddChangeButton(TuyaDeviceScanInfo data)
+    {
+        await OnClick.InvokeAsync(data);
+    }
+
+    private bool ContainsMonitoredDevices(string id)
+    {
+        return MonitoredDevices?.ContainsKey(id) == true;
+    }
+}

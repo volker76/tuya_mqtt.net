@@ -1,0 +1,144 @@
+﻿@using System.Diagnostics;
+@using tuya_mqtt.net.Helper;
+@using Microsoft.JSInterop;
+@using tuya_mqtt.net.Services;
+@using tuya_mqtt.net.Data;
+
+@inject LogNotificationService LogService;
+@inject ILogger<LogComponent> Logger;
+@inject IJSRuntime JS;
+@inject BrowserService Browser;
+
+<script suppress-error="BL9992">
+    window.downloadFileFromStream = async (fileName, contentStreamReference) => {
+        const arrayBuffer = await contentStreamReference.arrayBuffer();
+        const blob = new Blob([arrayBuffer]);
+        const url = URL.createObjectURL(blob);
+        const anchorElement = document.createElement('a');
+        anchorElement.href = url;
+        anchorElement.download = fileName ?? '';
+        anchorElement.click();
+        anchorElement.remove();
+        URL.revokeObjectURL(url);
+    }
+</script>
+<MudPaper Width="@GetWidth()" Height="@GetHeight()">
+    <div class="d-flex flex-row flex-grow-1 gap-4">
+        <MudSwitch @bind-Checked="@ScrollBottom" Label="Keep scroll to bottom" Color="Color.Primary"/>
+        @if (Debugger.IsAttached)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick=@TestErrorLog>TestLog</MudButton>
+        }
+        <div class="flex-shrink-1" style="width:100%"></div>
+        <div class="flex-none " style="width:64px">
+            <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Size="Size.Medium" OnClick="SaveLogAsync" />
+        </div>
+    </div>
+    <MudDataGrid Style="display: flex; flex-direction: column; height: 100%;" Class="pa-5" Items="@_logitems" Hover="true" Dense="true" Striped="true" Bordered="false" RowStyleFunc="@RowStyleFunc">
+        <Columns>
+            <PropertyColumn Property="x => x.LogLevel" Title="LogLevel" CellStyleFunc="@CellStyleFunc" />
+            <PropertyColumn Property="x => x.Message" Title="Message" CellStyleFunc="@CellStyleFunc" />
+        </Columns>
+    </MudDataGrid>
+       
+</MudPaper>
+
+@code {
+    private List<LogItem> _logitems = new List<LogItem>();
+    private bool ScrollBottom { get; set; } = true;
+
+    [ParameterAttribute]
+    public int Height { get; set; } = 0;
+
+    [ParameterAttribute]
+    public int Width { get; set; } = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Browser.InitAsync(JS);
+        LogService.OnLogAdded += LogAdded;
+        foreach (var item in LogService.GetLogItems())
+        {
+            _logitems.Add(item);
+            this.StateHasChanged();
+        }
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        return ScrollToEndAsync();
+    }
+
+    private string GetHeight()
+    {
+        if (Height == 0)
+            return "";
+        return Height.ToString()+"px";
+    }
+
+    private string GetWidth()
+    {
+        if (Width == 0)
+            return "";
+        return Width.ToString() + "px";
+    }
+
+    private Func<LogItem, int, string> RowStyleFunc => (x, i) =>
+    {
+        if (x.LogLevel == LogLevel.Error)
+            return "background-color:#DF787E";
+        if (x.LogLevel == LogLevel.Warning)
+            return "background-color:#E4BF6B";
+        if (x.LogLevel == LogLevel.Debug)
+            return "color:#9c9c9c";
+        return "";
+    };
+
+    private Func<LogItem, string> CellStyleFunc => x =>
+    {
+        if (x.LogLevel == LogLevel.Debug)
+            return "color:#9c9c9c";
+        return "";
+    };
+
+    private void LogAdded(object? sender, LogItem item)
+    {
+        _logitems.Add(item);
+        InvokeAsync(this.StateHasChanged);
+        
+    }
+
+    private Task ScrollToEndAsync()
+    {
+        if (ScrollBottom)
+        {
+#warning this is ugly as we don't know if there may be multiple scollable elements on the page'
+            return Browser.ScrollClassIntoView("tfoot.mud-table-foot", 0);
+        }
+       
+        return Task.CompletedTask;
+    }
+
+    private void TestErrorLog()
+    {
+        Logger.LogError(new Exception("TestException"),"TestError");
+    }
+
+    private Stream GetLogFileStream()
+    {
+        return LogService.GetLogFile();
+        
+    }
+
+    private async Task SaveLogAsync()
+    {
+        var fileStream = GetLogFileStream();
+
+        var fileName = $"tuya_mqtt {DateTime.Now:yyyy-MM-dd HH.mm.ss}.log";
+
+        using var streamRef = new DotNetStreamReference(stream: fileStream);
+
+        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+    }
+
+}

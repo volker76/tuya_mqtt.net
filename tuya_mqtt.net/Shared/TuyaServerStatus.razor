@@ -1,0 +1,42 @@
+﻿@using tuya_mqtt.net.Services
+@inject TuyaCommunicatorService Service
+@inject TuyaConnectedDeviceService Devices
+
+<table class="TuyaStatus">
+   
+    <tr>
+        <td class="list1"><MudText Align="Align.Left">status:</MudText></td>
+        <td class="list2">
+            @if (Devices.TimerRunning)
+            {
+                <MudText Align="Align.Left" Style="@($"color:{Colors.Green.Default};")">actively monitoring (@Devices.TimerInterval ms)</MudText>
+            }
+            else
+            {
+                <MudText Align="Align.Left" Style="@($"color:{Colors.Red.Default};")">not polling (timer is off)</MudText>
+            }
+
+        </td>
+       
+    </tr>
+    <tr>
+        <td class="list1">
+            <MudText Align="Align.Left">monitored devices:</MudText>
+        </td>
+        <td class="list2">
+            <MudText Align="Align.Left">@Devices.GetMonitoredDevices().Count</MudText>
+        </td>
+    </tr>
+    
+</table>
+
+@code {
+
+    protected override void OnInitialized()
+    {
+        
+    }
+
+   
+
+}

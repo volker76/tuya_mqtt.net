@@ -1,0 +1,21 @@
+﻿body {
+}
+
+
+td.list1 {
+    padding-right: 10px;
+}
+
+td.list2 {
+    font-weight: 700 !important;
+    >p
+
+    {
+        font-weight: 700 !important;
+    }
+
+}
+
+.TuyaStatus {
+    padding-top: 20px;
+}

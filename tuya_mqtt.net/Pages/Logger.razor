@@ -1,0 +1,54 @@
+﻿@page "/logger"
+@using tuya_mqtt.net.Data;
+@using tuya_mqtt.net.Services;
+@inject IJSRuntime JS
+@inject BrowserService Browser
+
+<PageTitle>Log</PageTitle>
+<h1>System log</h1>
+
+<div @ref=_myElementReference>
+    <LogComponent Height="@LogWindowHeight" />
+</div>
+@code {
+
+    private ElementReference _myElementReference;
+
+    private int LogWindowHeight { get; set; } = 0;
+    protected override void OnInitialized()
+    {
+        
+
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Browser.InitAsync(JS);
+            Browser.Resize += OnResize;
+
+            var rect = await Browser.GetElementClientRectAsync(_myElementReference);
+
+            CalculateNewLogComponentHeight(new WindowSize() { Height = Browser.BrowserHeight, Width = Browser.BrowserWidth }, rect);
+            StateHasChanged();
+        }
+        
+    }
+
+
+    private async void OnResize(object? obj, WindowSize newSize)
+    {
+        var rect = await Browser.GetElementClientRectAsync(_myElementReference);
+
+        CalculateNewLogComponentHeight(newSize, rect);
+        StateHasChanged();
+    }
+
+    private void CalculateNewLogComponentHeight(WindowSize viewportSize, BrowserService.BoundingClientRect logComponentClientRect)
+    {
+#warning TODO - find out where this offset of ~66 come from
+        LogWindowHeight = viewportSize.Height - (int)logComponentClientRect.Top - 66;
+    }
+
+}

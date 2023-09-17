@@ -1,0 +1,145 @@
+﻿@using tuya_mqtt.net.Data
+@using System.Diagnostics.CodeAnalysis
+
+<MudGrid>
+    <MudItem lg="3" md="2" sm="12"></MudItem>
+    <MudItem lg="6" md="8" sm="12">
+        @if (MonitoredDevices?.Count() == 0)
+        {
+            <MudText Color=@Color.Secondary>No devices in use.</MudText>
+        }
+        else
+        {
+            <MudPaper>
+                <MudTreeView Items="TreeItems" MultiSelection="false" Hover="true">
+                    <ItemTemplate Context="item">
+                        <MudTreeViewItem @bind-Expanded="@item.IsExpanded" Items="@item.SubItems" Value="@item"
+                                         Icon="@item.Icon"  >
+                                         
+                            <BodyContent>
+                                <div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%">
+
+
+                                    @if (context.Value.SubItems is {Count: > 0 })
+                                    {
+                                        <MudTooltip Text="@context.Value.Address">
+                                            <MudText Style="justify-self: start;">@context.Value.Title</MudText>
+                                        </MudTooltip>
+                                        
+                                        <MudIconButton Style="justify-self: end;" Icon="@Icons.Material.Filled.Edit" OnClick="@(() => { ClickChangeButton(item.ID).AndForget(); })" OnSize="Size.Medium" Color="Color.Inherit" />
+
+                                    }
+                                    else
+                                    {
+                                        <MudTooltip Text="@context.Value.Address">
+                                            <MudText Style="justify-self: start;">@context.Value.Title</MudText>
+                                        </MudTooltip>
+                                        <MudText Style="">@context.Value.Value</MudText>
+                                    }
+                                </div>
+                            </BodyContent>
+                        </MudTreeViewItem>
+                                        
+                    </ItemTemplate>
+                </MudTreeView>
+            </MudPaper>
+        }
+    </MudItem>
+    <MudItem lg="3" md="2" sm="12"></MudItem>
+</MudGrid>
+
+@code {
+    [Parameter]
+    public IReadOnlyDictionary<string, TuyaExtendedDeviceInformation>? MonitoredDevices { get; set; }
+
+    private IReadOnlyDictionary<string, List<DP>> _monitoredData = new Dictionary<string, List<DP>>();
+
+#pragma warning disable BL0007
+    [Parameter]
+    public IReadOnlyDictionary<string, List<DP>> MonitoredData
+    {
+        get
+        {
+            return _monitoredData!;
+        }
+        set 
+        { 
+            _monitoredData = value;
+            UpdateTreeData();
+        }
+    }
+#pragma warning restore BL0007
+
+    private HashSet<MonitoredDeviceItems> TreeItems { get; set; } = new HashSet<MonitoredDeviceItems>();
+
+    private async Task ClickChangeButton(string ID)
+    {
+        await OnClick.InvokeAsync(ID);
+    }
+
+    protected override void OnInitialized()
+    {
+        
+    }
+
+    /// <summary>
+    /// List click event.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnClick { get; set; }
+
+   
+
+
+    private void UpdateTreeData()
+    {
+        HashSet<MonitoredDeviceItems> NewTreeItems = new HashSet<MonitoredDeviceItems>();
+
+        @foreach (var d in MonitoredDevices!)
+        {
+            var item = new MonitoredDeviceItems(d.Value.Name, Icons.Material.Filled.Wifi, d.Value.ID, d.Value.Address);
+            item.SubItems = new HashSet<MonitoredDeviceItems>();
+            item.IsExpanded = IsExpanded(TreeItems,item);
+            @foreach (var i in GetData(d.Key))
+            {
+                
+                var data = new MonitoredDeviceItems(i.DPNumber.ToString(), Icons.Material.Filled.DataObject, d.Value.ID + i.DPNumber.ToString(), d.Value.Address, i.Value);
+                item.SubItems.Add(data);
+
+            }
+
+            NewTreeItems.Add(item);
+
+        }
+        TreeItems = NewTreeItems;
+    }
+
+    private List<DP> GetData(string ID)
+    {
+        if (MonitoredData?.TryGetValue(ID, out var data) == true)
+        {
+            return data;
+        }
+        else
+        {
+            return new List<DP>();
+        }
+
+    }
+
+
+    private bool IsExpanded(HashSet<MonitoredDeviceItems> itemset, MonitoredDeviceItems item)
+    {
+        @foreach (var i in itemset)
+        {
+            if (i.Title == item.Title &&
+                i.Icon == item.Icon &&
+                i.ID == item.ID)
+                return i.IsExpanded;
+
+        }
+        return false;
+    }
+
+}
+

@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.33920.267
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{7841F1F2-14D7-4A9C-B317-94CDF82E6EB4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "tuya_mqtt.net", "tuya_mqtt.net\tuya_mqtt.net.csproj", "{FA67EFDE-D4DE-4911-99D1-2A8CD8869BCB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7841F1F2-14D7-4A9C-B317-94CDF82E6EB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7841F1F2-14D7-4A9C-B317-94CDF82E6EB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7841F1F2-14D7-4A9C-B317-94CDF82E6EB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7841F1F2-14D7-4A9C-B317-94CDF82E6EB4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FA67EFDE-D4DE-4911-99D1-2A8CD8869BCB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FA67EFDE-D4DE-4911-99D1-2A8CD8869BCB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FA67EFDE-D4DE-4911-99D1-2A8CD8869BCB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FA67EFDE-D4DE-4911-99D1-2A8CD8869BCB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D67EA7DD-F0DF-4D9B-8EC2-76A86CBA39A1}
+	EndGlobalSection
+EndGlobal

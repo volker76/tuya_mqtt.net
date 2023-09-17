@@ -1,0 +1,42 @@
+﻿@page "/mqtt"
+@using tuya_mqtt.net.Data;
+@using tuya_mqtt.net.Services;
+@inject NavigationManager NavManager
+@inject MqttClientService Service
+
+
+<PageTitle>MQTT Client</PageTitle>
+
+<h1>MQTT</h1>
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Broker Status Overview</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Default" OnClick="GoSettings" />
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudText Class="h2">Server Status</MudText>
+        
+        <MqttBrokerStatus />
+        
+
+    </MudCardContent>
+    
+</MudCard>
+
+@code {
+
+    
+
+    public void GoSettings()
+    {
+        NavManager.NavigateTo("/settings");
+    }
+
+   
+    
+}

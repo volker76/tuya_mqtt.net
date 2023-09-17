@@ -1,0 +1,56 @@
+﻿@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="_tuyamqttTheme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="0">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit" Href="https://github.com/volker76/tuya_mqtt.net" Target="_blank" />
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
+        <MudDrawerHeader>
+            <MudImage Src="/favicon.png" Width=48 Height=48 Alt="TuyaMqtt" Elevation="25" Class="rounded-lg" />
+            <MudText class="pa-4" Typo="Typo.h6">tuya_mqtt.net</MudText>
+        </MudDrawerHeader>
+        <NavMenu />
+    </MudDrawer>
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="my-16 pt-16">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    bool _drawerOpen = true;
+
+    private readonly MudTheme _tuyamqttTheme = new()
+    {
+        Palette = new PaletteLight
+        {
+                Primary = "#ff4800",
+                PrimaryLighten = "#FFA886",
+                PrimaryDarken = "#7B2300",
+                Secondary = "#4800FF",
+                SecondaryLighten = "#A886FF",
+                SecondaryDarken = "#23007B",
+                Tertiary = "#00FF48",
+                TertiaryDarken = "#007B23",
+                AppbarBackground = "#ff4800",
+                AppbarText = "#f0f0f0",
+            
+            
+    // more color properties
+        }
+    };
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}
+
+
