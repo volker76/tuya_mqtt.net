@@ -46,7 +46,7 @@ jobs:
              else
                 TAGS='["user/image:latest"]'
              fi
-             echo '::set-output name=tags::'$TAGS
+             echo $TAGS
 
       # Workaround: https://github.com/docker/build-push-action/issues/461
       - name: Setup Docker buildx
