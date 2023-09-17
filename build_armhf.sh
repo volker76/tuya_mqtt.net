@@ -1,6 +1,5 @@
 #!/bin/bash
 
-git pull
 branch=$(git rev-parse --abbrev-ref HEAD)
 subbranch="$branch-"
 
