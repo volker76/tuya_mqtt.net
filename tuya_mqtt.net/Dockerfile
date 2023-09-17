@@ -1,13 +1,14 @@
 FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
-
+ENV DOTNET_CLI_HOME=/tmp
 WORKDIR /app
 EXPOSE 80
 
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
 COPY ["tuya_mqtt.net.csproj", "."]
-RUN dotnet --info
-RUN dotnet restore -r linux-arm "./tuya_mqtt.net.csproj"
+#RUN dotnet --info
+ENV DOTNET_CLI_HOME=/tmp
+RUN dotnet restore "./tuya_mqtt.net.csproj"
 COPY . .
 WORKDIR "/src/."
 RUN dotnet build "tuya_mqtt.net.csproj" -c Release -o /app/build
