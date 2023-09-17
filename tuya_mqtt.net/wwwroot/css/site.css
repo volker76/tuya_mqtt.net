@@ -65,3 +65,21 @@ a, .btn-link {
 .blazor-error-boundary::after {
     content: "An error has occurred."
 }
+
+.markdown { line-height: 2; }
+
+.markdown ul {
+    list-style: disc;
+    padding-left: 20px;
+    list-style-position: outside;
+}
+
+.markdown ul li ul {
+        list-style: circle;
+        list-style-position: outside;
+    }
+
+.markdown p {
+    padding-bottom:10px;
+}
+

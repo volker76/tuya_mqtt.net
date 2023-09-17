@@ -1,6 +1,7 @@
 # MQTT Client for local Tuya devices
 ## project scope & intended use
 This is a .NET7.0 Blazor application to implement a server which is a MQTT client
+
 - it polls local tuya devices in the network
    - publishes it data points
 - subscribes to commands to allow setting datapoints in the tuya device
