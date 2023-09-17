@@ -30,11 +30,11 @@ services:
     container_name: tuya_mqtt.net
       
     ports:
-      - 6667:6667/udp #needs to be published to receive encryped TUYA boradcasts 
-      - 6666:6666/udp #needs to be published to receive unencryped TUYA boradcasts 
+      - 6667:6667/udp #needs to be published to receive encryped TUYA broadcasts 
+      - 6666:6666/udp #needs to be published to receive unencryped TUYA broadcasts 
     build:
       context: .
-      dockerfile: ./tuya_mqtt.net/Dockerfile
+      dockerfile: ./tuya_mqtt.net/Dockerfile.dev
     
     networks:
         - mqtt
