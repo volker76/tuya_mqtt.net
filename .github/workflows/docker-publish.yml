@@ -47,6 +47,7 @@ jobs:
                 TAGS='["user/image:latest"]'
              fi
              echo $TAGS
+             echo "{tags}={$TAGS}" >> $GITHUB_OUTPUT
 
       # Workaround: https://github.com/docker/build-push-action/issues/461
       - name: Setup Docker buildx
