@@ -26,7 +26,7 @@ services:
         - mqtt
 
   tuya_mqtt.net:
-    image: tuya_mqtt.net
+    image: volkerhaensel/tuya_mqtt.net
     container_name: tuya_mqtt.net
     volumes:
       - tuya.net_config:/app/datadir    
