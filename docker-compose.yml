@@ -28,7 +28,8 @@ services:
   tuya_mqtt.net:
     image: tuya_mqtt.net
     container_name: tuya_mqtt.net
-      
+    volumes:
+      - tuya.net_config:/app/datadir    
     ports:
       - 6667:6667/udp #needs to be published to receive encryped TUYA broadcasts 
       - 6666:6666/udp #needs to be published to receive unencryped TUYA broadcasts 
@@ -41,4 +42,7 @@ networks:
 
   mqtt:
     name: mqtt
+
+volumes:
+  tuya.net_config:
 
