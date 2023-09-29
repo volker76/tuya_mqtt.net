@@ -29,11 +29,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      -
+      - name: Set output
+        id: vars
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+        env:
+          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
+        run: |
+          echo $RELEASE_VERSION
+          echo ${{ steps.vars.outputs.tag }}
+      
         # Add support for more platforms with QEMU (optional)
         # https://github.com/docker/setup-qemu-action
-        name: Set up QEMU
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       
       - name: GitHub Tag Name example
