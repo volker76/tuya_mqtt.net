@@ -29,9 +29,12 @@ namespace tuya_mqtt.net.Services
         {
             get
             {
-                var service = _serviceProvider.GetRequiredService<TuyaConnectedDeviceService>();
-                return service;
-                
+                try
+                {
+                    var service = _serviceProvider.GetRequiredService<TuyaConnectedDeviceService>();
+                    return service;
+                }
+                catch { return null; }
             }
         }
 
