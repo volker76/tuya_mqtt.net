@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections;
+using System.Diagnostics;
 using Microsoft.Extensions.Options;
 using tuya_mqtt.net.Data;
 using com.clusterrr.TuyaNet;
@@ -35,6 +36,20 @@ namespace tuya_mqtt.net.Services
                     return service;
                 }
                 catch { return null; }
+            }
+        }
+
+        public IEnumerable<TuyaApi.Region> Regions
+        {
+            get
+            {
+                List< TuyaApi.Region > regions = new List<TuyaApi.Region>();
+                foreach (TuyaApi.Region r in Enum.GetValues(typeof(TuyaApi.Region)))
+                {
+                    regions.Add(r);
+                }
+
+                return regions;
             }
         }
 

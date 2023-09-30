@@ -143,6 +143,11 @@
     {
         var pv = TuyaProtocolVersion.V33;
         if (clicked.Version == "3.1") pv = TuyaProtocolVersion.V31;
+
+        var api = new TuyaApi(region: TuyaApi.Region.CentralEurope, accessId: "wf5qy33dcjvna5dsnyaf", apiSecret: "5a3025722a7a4ef8b23410ac032d01aa");
+        var devspec = await api.RequestAsync(TuyaApi.Method.GET, $"/v1.1/devices/41465054f4cfa21f8805/specifications");
+        devspec = await api.RequestAsync(TuyaApi.Method.GET, $"/v2.0/cloud/thing/batch?device_ids=41465054f4cfa21f8805");
+
         await AddItemsToForm(clicked.IP, clicked.GwId, pv);
     }
 
