@@ -18,6 +18,7 @@ services:
         - 1883:1883
         - 8883:8883
         - 9001:9001
+    
     volumes:
         - ./mosquitto/config:/mosquitto/config
         - ./mosquitto/data:/mosquitto/data
@@ -34,7 +35,8 @@ services:
       - 6667:6667/udp #needs to be published to receive encryped TUYA broadcasts 
       - 6666:6666/udp #needs to be published to receive unencryped TUYA broadcasts 
       - 8889:80/tcp #connect to 8889 to get to the web UI
-    
+#   network_mode: host
+    restart: on-failure
     networks:
         - mqtt
 
