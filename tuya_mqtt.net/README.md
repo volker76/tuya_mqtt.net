@@ -1,5 +1,7 @@
 # MQTT Client for local Tuya devices
 ## project scope & intended use
+<img src="doc/logo.png" 
+     style="width:80px;" />
 This is a .NET7.0 Blazor application to implement a server which is a MQTT client
 
 - it polls local tuya devices in the network
@@ -17,7 +19,5 @@ Battery driven sensors are noit supported as those do not offer a local port.
 
 ## used other github projects
 implements a MQTT Client (based on [MQTTnet](https://github.com/dotnet/MQTTnet))
-
 implements a local Tuya communicator (based on [tuyanet](https://github.com/ClusterM/tuyanet))
 
-Thanks to all the contributors of those projects to set the foundation for the TuyaMQtt.net client

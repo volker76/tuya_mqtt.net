@@ -8,6 +8,8 @@ RUN apt-get update && apt-get -y upgrade
 RUN apt install -y tzdata
 RUN apt install -y arping inetutils-ping libnet-ifconfig-wrapper-perl mc
 
+
+
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
 COPY ["tuya_mqtt.net.csproj", "."]
@@ -27,6 +29,8 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     fi \
     && echo "target $TARGETPLATFORM build $BUILDPLATFORM RID $RID" \
     && dotnet build "tuya_mqtt.net.csproj" -r $RID -c Release -o /app/build
+
+RUN ln -s ../doc /app/wwwroot/doc
 
 FROM build AS publish
 ARG BUILDPLATFORM
