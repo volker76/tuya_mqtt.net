@@ -2,7 +2,6 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
 ENV DOTNET_CLI_HOME=/tmp
 WORKDIR /app
 EXPOSE 80
-RUN ln -s ../doc /app/wwwroot/doc
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
