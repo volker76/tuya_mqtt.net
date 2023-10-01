@@ -13,15 +13,16 @@
     <Compile Remove="DataDir\**" />
     <Compile Remove="MQTTnet\**" />
     <Compile Remove="tuyanet\**" />
-    <Content Remove="DataDir\**" />
-    <Content Remove="MQTTnet\**" />
-    <Content Remove="tuyanet\**" />
     <EmbeddedResource Remove="DataDir\**" />
     <EmbeddedResource Remove="MQTTnet\**" />
     <EmbeddedResource Remove="tuyanet\**" />
     <None Remove="DataDir\**" />
     <None Remove="MQTTnet\**" />
     <None Remove="tuyanet\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="wwwroot\doc\logo.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -44,6 +45,10 @@
 	  <EmbeddedResource Include="README.md">
 	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 	  </EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="wwwroot\doc\logo.png" />
 	</ItemGroup>
 
 </Project>
