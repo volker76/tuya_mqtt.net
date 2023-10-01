@@ -6,15 +6,15 @@
 @inject TuyaConnectedDeviceService TuyaConnectedDevices;
 @inject NavigationManager NavManager
 @inject BrowserService Browser;
+@* ReSharper disable once InconsistentNaming *@
 @inject IJSRuntime JS;
 @inject ISnackbar Snackbar;
 @inject ILogger<TuyaDevices> Logger;
 
 
 <PageTitle>Tuya Devices</PageTitle>
-
+@* ReSharper disable UnknownCssClass *@
 <h1>Tuya Devices</h1>
-
 <MudCard>
     <MudCardHeader>
         <CardHeaderContent>
@@ -31,10 +31,10 @@
 </MudCard>
 <MudExpansionPanels MultiExpansion="true" Class="pt-4">
     <MudExpansionPanel @ref=_expansionList IsInitiallyExpanded=true Text="Scanned Network Devices">
-        <TuyaScannedDevices ScannedDevicesList="_tuyaScannedDevices" MonitoredDevices="_tuyaMonitoredDevices" OnClick="AddChangeTuyaDeviceFromScan" />
+        <TuyaScannedDevices ScannedDevicesList="_tuyaScannedDevices" MonitoredDevices="_tuyaMonitoredDevices" OnClick="AddOrChangeTuyaDeviceFromScan" />
     </MudExpansionPanel>
     <div class="AddSection">
-    <MudExpansionPanel @ref=_expansionAdd IsInitiallyExpanded=false Text="Add/Change Connected Device">
+        <MudExpansionPanel @ref=_expansionAdd IsInitiallyExpanded=false Text="Add/Change Connected Device">
         <MudPaper>
            
             <MudStack Row="true" Class="align-center">
@@ -69,14 +69,14 @@
     </MudExpansionPanel>
     </div>
     <MudExpansionPanel Text="Connected Devices & Data">
-        <TuyaMonitoredDevices MonitoredDevices="_tuyaMonitoredDevices" MonitoredData="_tuyaMonitoredData" OnClick="AddChangeTuyaDeviceFromMonitor" />
+        <TuyaMonitoredDevices MonitoredDevices="_tuyaMonitoredDevices" MonitoredData="_tuyaMonitoredData" OnClick="AddOrChangeTuyaDeviceFromMonitor" />
     </MudExpansionPanel>
 </MudExpansionPanels>
-
+@* ReSharper restore UnknownCssClass *@
 @code {
-    private bool _isInWait = false;
-    private MudExpansionPanel? _expansionList = null;
-    private MudExpansionPanel? _expansionAdd = null;
+    private bool _isInWait;
+    private MudExpansionPanel? _expansionList;
+    private MudExpansionPanel? _expansionAdd;
 
     private readonly double[] _timeList = { 500,1,2,5,10,30,60 };
 
@@ -129,29 +129,43 @@
         NavManager.NavigateTo("/settings");
     }
 
-    private async void AddChangeTuyaDeviceFromMonitor(string ID)
+    private async void AddOrChangeTuyaDeviceFromMonitor(string id)
     {
-        var devInfo = TuyaConnectedDevices.GetDevice(ID);
+        var devInfo = TuyaConnectedDevices.GetDevice(id);
         if (devInfo != null)
         {
 
-            await AddItemsToForm(devInfo.Address, ID, devInfo.ProtocolVersion);
+            await AddItemsToForm(devInfo.Address, id, devInfo.ProtocolVersion);
         }
     }
 
-    private async void AddChangeTuyaDeviceFromScan(TuyaDeviceScanInfo clicked)
+    private async void AddOrChangeTuyaDeviceFromScan(TuyaDeviceScanInfo clicked)
     {
-        var pv = TuyaProtocolVersion.V33;
-        if (clicked.Version == "3.1") pv = TuyaProtocolVersion.V31;
+        if (_tuyaMonitoredDevices?.ContainsKey(clicked.GwId) == true)
+        {
+            //this is a change of existing data
+            await AddItemsToForm(clicked.IP, clicked.GwId);
+        }
+        else
+        {  //new item from scan
+            var ret = await TuyaService.GetDeviceDataFromApiAsync(clicked.GwId);
+            string local = ret.Item2;
+            string name = ret.Item3;
+            if (ret.Item1)
+            {
+                await AddItemsToForm(clicked.IP, clicked.GwId, TuyaProtocolVersion.V33, local, name);
+            }
+            else
+            {
+                var pv = TuyaProtocolVersion.V33;
+                if (clicked.Version == "3.1") pv = TuyaProtocolVersion.V31;
 
-        var api = new TuyaApi(region: TuyaApi.Region.CentralEurope, accessId: "wf5qy33dcjvna5dsnyaf", apiSecret: "5a3025722a7a4ef8b23410ac032d01aa");
-        var devspec = await api.RequestAsync(TuyaApi.Method.GET, $"/v1.1/devices/41465054f4cfa21f8805/specifications");
-        devspec = await api.RequestAsync(TuyaApi.Method.GET, $"/v2.0/cloud/thing/batch?device_ids=41465054f4cfa21f8805");
-
-        await AddItemsToForm(clicked.IP, clicked.GwId, pv);
+                await AddItemsToForm(clicked.IP, clicked.GwId, pv);
+            }
+        }
     }
 
-    private async Task AddItemsToForm(string addr, string id, TuyaProtocolVersion pv )
+    private async Task AddItemsToForm(string addr, string id, TuyaProtocolVersion pv = TuyaProtocolVersion.V33, string localKey = "", string name = "")
     {
         _tuyaDeviceIp = addr;
         _tuyaId = id;
@@ -171,15 +185,15 @@
         }
         else
         {
-            _tuyaLocalKey = "";
-            _tuyaName = "";
+            _tuyaLocalKey = localKey;
+            _tuyaName = name;
             _tuyaProtocolVersion = pv;
         }
 
         _tuyaPolltimeValue = 5;
 
         _expansionList?.Expand(false);
-        _expansionAdd?.Expand(true);
+        _expansionAdd?.Expand();
         await InvokeAsync(StateHasChanged);
         await Task.Delay(500);
         Browser.ScrollClassIntoView("div.AddSection", 0).AndForget();
@@ -193,7 +207,7 @@
             _isInWait = true;
             StateHasChanged();
             await Task.Delay(100);
-            var device = new Data.TuyaDeviceInformation() { Address = _tuyaDeviceIp, ID = _tuyaId, Key = _tuyaLocalKey, ProtocolVersion=_tuyaProtocolVersion };
+            var device = new TuyaDeviceInformation() { Address = _tuyaDeviceIp, ID = _tuyaId, Key = _tuyaLocalKey, ProtocolVersion=_tuyaProtocolVersion };
 
             var response = await TuyaService.TestConnect(device);
             string message = $"<h3>connected to {_tuyaDeviceIp}</h3>";
@@ -217,7 +231,7 @@
         {
             _isInWait = false;
             StateHasChanged();
-        };
+        }
     }
 
     private async Task SaveAddTuyaDevice()
@@ -233,7 +247,7 @@
             _isInWait = true;
             StateHasChanged();
 
-            var device = new Data.TuyaDeviceInformation() { Address = _tuyaDeviceIp, 
+            var device = new TuyaDeviceInformation() { Address = _tuyaDeviceIp, 
                 ID = _tuyaId, 
                 Key = _tuyaLocalKey
             };
@@ -254,7 +268,7 @@
             _isInWait = false;
             _tuyaMonitoredDevices = TuyaConnectedDevices.GetMonitoredDevices();
             StateHasChanged();
-        };
+        }
     }
 
     private void OnTuyaScannerUpdate(object? sender, TuyaDeviceScanInfo item)
