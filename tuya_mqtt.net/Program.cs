@@ -49,6 +49,7 @@ namespace tuya_mqtt.net
 
             builder.Configuration.AddJsonFile(DataFile, true);
             builder.Services.ConfigureWritableOptions<MqttClientOptions>(builder.Configuration, "MQTT", DataFile);
+            builder.Services.ConfigureWritableOptions<TuyaCommunicatorOptions>(builder.Configuration, "TuyaAPI", DataFile);
             builder.Services.ConfigureWritableOptions<TuyaMonitoredDeviceOptions>(builder.Configuration, "TuyaDev", DataFile);
 
             var app = builder.Build();
