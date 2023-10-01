@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using MudBlazor;
 using System.Threading.Tasks;
 using System.Threading;
+using Newtonsoft.Json.Linq;
 
 namespace tuya_mqtt.net.Services
 {
@@ -278,6 +279,43 @@ namespace tuya_mqtt.net.Services
                 value = "false";
 
             return value;
+        }
+
+        public async Task TestAPIAsync(string apiKey, string apiSecret, TuyaApi.Region region)
+        {
+            try
+            {
+                var api = new TuyaApi(region: region, accessId: apiKey, apiSecret: apiSecret);
+
+                if (api != null)
+                {
+                    //check if we can use it to make a request
+                    var json = await api.RequestAsync(TuyaApi.Method.GET,
+                        $"/v2.0/cloud/space/child?only_sub=false");
+                    JObject jObject = JObject.Parse(json);
+                    var data = jObject["data"]; //there shall be a list named "data"
+                    if (data != null)
+                    {
+                        if (data.Any() ) 
+                            return;
+                        else
+                            throw new Exception("API credentials correct, but possibly wrong region.");
+                    }
+                    else
+                        throw new Exception("API call did not return expected result.");
+
+                }
+                else
+                {
+                    throw new Exception("cannot assign to API with given API credentials.");
+
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "error testing TUYA API");
+                throw new Exception("error testing TUYA API",e);
+            }
         }
     }
 }
