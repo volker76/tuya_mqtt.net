@@ -33,6 +33,9 @@ namespace tuya_mqtt.net.Services
         {
             _logger = logger;
         }
+
+        public bool IsInitialized => _jsModule != null;
+
         public async Task InitAsync(IJSRuntime js)
         {
             await _initLocker.WaitAsync().ConfigureAwait(false);

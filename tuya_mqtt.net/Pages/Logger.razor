@@ -3,6 +3,7 @@
 @using tuya_mqtt.net.Services;
 @inject IJSRuntime JS
 @inject BrowserService Browser
+@inject ILogger<Logger> LocalLogger
 
 <PageTitle>Log</PageTitle>
 <h1>System log</h1>
@@ -15,11 +16,6 @@
     private ElementReference _myElementReference;
 
     private int LogWindowHeight { get; set; } = 0;
-    protected override void OnInitialized()
-    {
-        
-
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -39,10 +35,24 @@
 
     private async void OnResize(object? obj, WindowSize newSize)
     {
-        var rect = await Browser.GetElementClientRectAsync(_myElementReference);
+        if (Browser.IsInitialized)
+        {
+            try
+            {
+                var rect = await Browser.GetElementClientRectAsync(_myElementReference);
 
-        CalculateNewLogComponentHeight(newSize, rect);
-        StateHasChanged();
+                CalculateNewLogComponentHeight(newSize, rect);
+                StateHasChanged();
+            }
+            catch (Exception e)
+            {
+                LocalLogger.LogError(e, "Error in OnResize");
+            }
+        }
+        else
+        {
+            LocalLogger.LogWarning("calling Resize, but not having Browser object initialized");
+        }
     }
 
     private void CalculateNewLogComponentHeight(WindowSize viewportSize, BrowserService.BoundingClientRect logComponentClientRect)
