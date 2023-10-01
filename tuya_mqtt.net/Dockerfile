@@ -26,7 +26,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     RID=linux-arm ; \
     fi \
     && echo "target $TARGETPLATFORM build $BUILDPLATFORM RID $RID" \
-    && dotnet build "tuya_mqtt.net.csproj" -r $RID -c Release -o /app/build
+    && dotnet build "tuya_mqtt.net.csproj" -r $RID --self-contained -c Release -o /app/build
 
 FROM build AS publish
 ARG BUILDPLATFORM
