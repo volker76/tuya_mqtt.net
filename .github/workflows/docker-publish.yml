@@ -33,9 +33,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Get tag
-        id: tag
-        run: echo "tag=$(git describe --tags HEAD)" > $GITHUB_ENV
+      - name: Git describe
+        id: ghd
+        uses: proudust/gh-describe@v1
 
         # Add support for more platforms with QEMU (optional)
         # https://github.com/docker/setup-qemu-action
@@ -87,5 +87,5 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           build-args: |
-            GIT_COMMIT=${{ steps.tag.tag }}
+            GIT_COMMIT=${{ steps.ghd.outputs.describe }}
 
