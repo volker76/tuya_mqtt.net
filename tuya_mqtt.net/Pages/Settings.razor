@@ -269,6 +269,7 @@
             opt.MqttNoFragmentation = _mqttNoFragmentation;
         });
 
+        Logger.LogInformation($"Save TUYA Settings AccessID:{_AccessID}");
         tuyadata.Update((opt) =>
         {
             opt.TuyaAPIAccessID = _AccessID;
