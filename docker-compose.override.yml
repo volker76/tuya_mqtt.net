@@ -6,7 +6,9 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80
     build:
-      context: .
-      dockerfile: ./tuya_mqtt.net/Dockerfile
+      context: tuya_mqtt.net
+      dockerfile: ./Dockerfile
+      args:
+            GIT_COMMIT: debug
     ports:
       - "80"

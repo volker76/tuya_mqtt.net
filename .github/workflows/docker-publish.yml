@@ -32,7 +32,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      
+
+      - name: Get tag
+        id: tag
+        run: echo "tag=$(git describe --tags HEAD)" > $GITHUB_ENV
+
         # Add support for more platforms with QEMU (optional)
         # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU
@@ -82,4 +86,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7
+          build-args: |
+            GIT_COMMIT=${{ steps.tag.tag }}
 
