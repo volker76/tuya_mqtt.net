@@ -54,6 +54,15 @@ namespace tuya_mqtt.net.Services
             }
         }
 
+        public bool TuyaApiConfigured
+        {
+            get
+            {
+                // ReSharper disable once ArrangeRedundantParentheses
+                return (!string.IsNullOrEmpty(Options.TuyaAPIAccessID) && !string.IsNullOrEmpty(Options.TuyaAPISecret));
+            }
+        }
+
         public TuyaCommunicatorService(IServiceProvider sp, ILogger<TuyaCommunicatorService> logger, IOptions<TuyaCommunicatorOptions> options, IOptions<GlobalOptions> globalOptions)
         {
             _logger = logger;
@@ -314,7 +323,7 @@ namespace tuya_mqtt.net.Services
         {
             string localKey=String.Empty;
             string deviceName=String.Empty;
-            if (string.IsNullOrEmpty(Options.TuyaAPIAccessID) || string.IsNullOrEmpty(Options.TuyaAPISecret))
+            if (!TuyaApiConfigured)
             {
                 _logger.LogInformation($"No Tuya API credentials configured to find information for ID:{id}.");
                 return new Tuple<bool, string, string>(false, localKey, deviceName);
