@@ -3,8 +3,10 @@
 @using com.clusterrr.TuyaNet
 @using tuya_mqtt.net.Services
 @using MqttClientOptions = tuya_mqtt.net.Data.MqttClientOptions
+@using TuyaCommunicatorOptions = tuya_mqtt.net.Data.TuyaCommunicatorOptions
 @inject ILogger<Settings> Logger
-@inject IWritableOptions<MqttClientOptions> data
+@inject IWritableOptions<MqttClientOptions> mqttdata
+@inject IWritableOptions<TuyaCommunicatorOptions> tuyadata
 @inject MqttClientService client;
 @inject TuyaCommunicatorService tuya;
 @inject ISnackbar Snackbar
@@ -17,6 +19,7 @@
     <MudCardHeader>
         <CardHeaderContent>
             <MudText Typo="Typo.h6">Tuya</MudText>
+            <MudText Style="@($"color:{Colors.Grey.Default};")" Typo="Typo.subtitle2">optional API settings to connect to TUYA cloud.</MudText>
         </CardHeaderContent>
         <CardHeaderActions>
             <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Default" />
@@ -30,13 +33,13 @@
             </MudStack>
             <MudTextField @bind-Value="_AccessSecret" Label="API Secret" HelperText="Tuya API Secret" Variant="Variant.Text" InputType="@_passwordApiInput"
                               Adornment="Adornment.End" AdornmentIcon="@_passwordApiInputIcon" OnAdornmentClick="ButtonTuyaApiPasswordToggle" AdornmentAriaLabel="Show Password"></MudTextField>
-            <MudSelect @bind-Value="tuyaApiRegion">
+            <MudSelect @bind-Value="_tuyaApiRegion">
                 @foreach (var r in tuya.Regions)
                 {
                     <MudSelectItem Value="@r">@r</MudSelectItem>
                 }
             </MudSelect>
-
+            
         </MudPaper>
     </MudCardContent>
 </MudCard>
@@ -54,7 +57,7 @@
         <MudPaper Elevation="0">
             <MudStack Row="true" Class="align-center" >
                 <MudTextField @bind-Value="_mqttHost" Label="Adress/IP" HelperText="Broker Adress" Variant="Variant.Text"></MudTextField>
-                <MudButton Variant="Variant.Filled" Style="height:40px" Color="Color.Primary" OnClick=@TestConnection>Test Connection</MudButton>
+                <MudButton Variant="Variant.Filled" Style="height:40px" Color="Color.Primary" OnClick=@TestDeviceConnection>Test Connection</MudButton>
             </MudStack>
             <MudStack Row="true" Class="align-center">
                 <MudTextField @bind-Value="_mqttPort" Label="Port" HelperText="Broker Port" Variant="Variant.Text" Format="D"></MudTextField>
@@ -78,13 +81,14 @@
                 <MudSwitch @bind-Checked="_mqttNoFragmentation" Label="Packet fagmentation" Color="Color.Primary"/>
             </MudTooltip>
             <MudTextField @bind-Value="_mqttTopic" Label="Topic" HelperText="MQTT Main Topic" Variant="Variant.Text"></MudTextField>
-     
         </MudPaper>
-        <MudPaper Elevation="0" Class="d-flex justify-end pt-5 ar-2">
-            <MudFab Color="Color.Primary"  StartIcon="@Icons.Material.Filled.Save" OnClick="SaveMqtt" />
-        </MudPaper>
+        
     </MudCardContent>
+   
 </MudCard>
+<MudPaper Elevation="0" Class="d-flex justify-end mt-5 ar-2">
+    <MudFab Color="Color.Primary"  StartIcon="@Icons.Material.Filled.Save" OnClick="SaveData" />
+</MudPaper>
 <MudOverlay Visible=@isInWait DarkBackground="true" >
     <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
 </MudOverlay>
@@ -111,7 +115,7 @@
     private string _AccessID = string.Empty;
     private string _AccessSecret = string.Empty;
 
-    private TuyaApi.Region tuyaApiRegion { get; set; } = TuyaApi.Region.WesternEurope;
+    private TuyaApi.Region _tuyaApiRegion { get; set; } = TuyaApi.Region.WesternEurope;
 
     InputType _passwordMqttInput = InputType.Password;
     string _passwordMqttInputIcon = Icons.Material.Filled.VisibilityOff;
@@ -154,14 +158,18 @@
     protected override void OnInitialized()
     {
         /* get values from global settings*/
-        _mqttHost = data.Value.MqttHost;
-        _mqttPort = data.Value.MqttPort > 0 ? data.Value.MqttPort.ToString() : String.Empty;
-        _mqttUsername = data.Value.MqttUser;
-        _mqttPassword = data.Value.MqttPassword;
-        MqttAuthentication = data.Value.MqttAuthentication;
-        _mqttV5 = data.Value.MqttV5;
-        _mqttTls = data.Value.MqttTls;
-        _mqttNoFragmentation = data.Value.MqttNoFragmentation;
+        _mqttHost = mqttdata.Value.MqttHost;
+        _mqttPort = mqttdata.Value.MqttPort > 0 ? mqttdata.Value.MqttPort.ToString() : String.Empty;
+        _mqttUsername = mqttdata.Value.MqttUser;
+        _mqttPassword = mqttdata.Value.MqttPassword;
+        MqttAuthentication = mqttdata.Value.MqttAuthentication;
+        _mqttV5 = mqttdata.Value.MqttV5;
+        _mqttTls = mqttdata.Value.MqttTls;
+        _mqttNoFragmentation = mqttdata.Value.MqttNoFragmentation;
+
+        _AccessID = tuyadata.Value.TuyaAPIAccessID;
+        _AccessSecret = tuyadata.Value.TuyaAPISecret;
+        _tuyaApiRegion = tuyadata.Value.TuyaAPIRegion;
 
     }
 
@@ -171,6 +179,7 @@
         {
             isInWait = true;
             StateHasChanged();
+
 
 
             Snackbar.Add("API connection successful", Severity.Success);
@@ -188,7 +197,7 @@
         }
     }
 
-    private async Task TestConnection()
+    private async Task TestDeviceConnection()
     {
         try
         {
@@ -238,7 +247,7 @@
     }
 
 
-    private void SaveMqtt()
+    private void SaveData()
     {
         Logger.LogInformation($"Save MQTT Settings addr:{_mqttHost} port:{_mqttPort} topic:{_mqttTopic}");
         if (!int.TryParse(_mqttPort, out var port))
@@ -246,7 +255,7 @@
             port = 0;
             _mqttPort = "";
         }
-        data.Update((opt) =>
+        mqttdata.Update((opt) =>
         {
             opt.MqttHost = _mqttHost;
 
@@ -260,7 +269,15 @@
             opt.MqttNoFragmentation = _mqttNoFragmentation;
         });
 
+        tuyadata.Update((opt) =>
+        {
+            opt.TuyaAPIAccessID = _AccessID;
+            opt.TuyaAPISecret = _AccessSecret;
+            opt.TuyaAPIRegion = _tuyaApiRegion;
+        });
+
         Snackbar.Add("Settings saved", Severity.Success);
     }
+
 
 }
