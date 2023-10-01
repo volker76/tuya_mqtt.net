@@ -22,10 +22,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Remove="wwwroot\doc\logo.png" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Remove="README.md" />
   </ItemGroup>
 
@@ -45,10 +41,6 @@
 	  <EmbeddedResource Include="README.md">
 	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 	  </EmbeddedResource>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <None Include="wwwroot\doc\logo.png" />
 	</ItemGroup>
 
 </Project>

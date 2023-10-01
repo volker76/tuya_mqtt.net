@@ -7,6 +7,6 @@ services:
       - ASPNETCORE_URLS=http://+:80
     build:
       context: .
-      dockerfile: ./tuya_mqtt.net/Dockerfile.dev
+      dockerfile: ./tuya_mqtt.net/Dockerfile
     ports:
       - "80"

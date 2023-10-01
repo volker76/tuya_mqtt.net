@@ -3,14 +3,19 @@ ENV DOTNET_CLI_HOME=/tmp
 WORKDIR /app
 EXPOSE 80
 
+ENV TZ=EUROPE/Berlin
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN apt-get update && apt-get -y upgrade
+RUN apt install -y tzdata
+RUN apt install -y arping inetutils-ping libnet-ifconfig-wrapper-perl mc
+
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
-COPY ["tuya_mqtt.net.csproj", "."]
-RUN dotnet --info
+COPY ["tuya_mqtt.net/tuya_mqtt.net.csproj", "tuya_mqtt.net/"]
 ENV DOTNET_CLI_HOME=/tmp
-RUN dotnet restore "./tuya_mqtt.net.csproj"
+RUN dotnet restore "tuya_mqtt.net/tuya_mqtt.net.csproj"
 COPY . .
-WORKDIR "/src/."
+WORKDIR "/src/tuya_mqtt.net"
 ARG BUILDPLATFORM
 ARG TARGETPLATFORM
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
