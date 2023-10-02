@@ -3,10 +3,9 @@ using Microsoft.Extensions.Options;
 using tuya_mqtt.net.Data;
 using com.clusterrr.TuyaNet;
 using System.Security.Cryptography;
+using JetBrains.Annotations;
 using MudBlazor;
 using Newtonsoft.Json.Linq;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using Microsoft.AspNetCore.DataProtection;
 
 namespace tuya_mqtt.net.Services
 {
@@ -28,7 +27,7 @@ namespace tuya_mqtt.net.Services
         private TuyaCommunicatorOptions Options => _tuyaoptions.CurrentValue;
 
         private readonly IOptionsMonitor<GlobalOptions> _globaloptions;
-        private GlobalOptions GlobalOptions => _globaloptions.CurrentValue;
+        [UsedImplicitly] private GlobalOptions GlobalOptions => _globaloptions.CurrentValue;
 
         private TuyaConnectedDeviceService? ConnectedDevices
         {
@@ -164,8 +163,6 @@ namespace tuya_mqtt.net.Services
                 throw new ArgumentOutOfRangeException(nameof(device.ID), "ID cannot be empty");
             if (!TuyaApiConfigured)
                 throw new InvalidOperationException("No cloud credentials configured");
-
-
             try
             {
                 var api = new TuyaApi(region: Options.TuyaAPIRegion, accessId: Options.TuyaAPIAccessID, apiSecret: Options.TuyaAPISecret);
@@ -236,6 +233,53 @@ namespace tuya_mqtt.net.Services
 
         // ReSharper disable once InconsistentNaming
         public async Task<List<DP>> GetDPAsync(TuyaExtendedDeviceInformation device)
+        {
+            if (device.CloudMode)
+                return await GetDPCloudAsync(device);
+            else
+                return await GetDPLocalAsync(device);
+            
+        }
+
+        // ReSharper disable once InconsistentNaming
+        public async Task<List<DP>> GetDPCloudAsync(TuyaExtendedDeviceInformation device)
+        {
+            _logger.LogDebug($"Poll cloud data from ID:{device.ID}");
+            if (string.IsNullOrEmpty(device.ID))
+                throw new ArgumentOutOfRangeException(nameof(device.ID), "ID cannot be empty");
+            if (!TuyaApiConfigured)
+                throw new InvalidOperationException("No cloud credentials configured");
+
+            try
+            {
+                var api = new TuyaApi(region: Options.TuyaAPIRegion, accessId: Options.TuyaAPIAccessID, apiSecret: Options.TuyaAPISecret);
+
+                Task<string> t = api.RequestAsync(TuyaApi.Method.GET,
+                    $"v2.0/cloud/thing/{device.ID}/shadow/properties");
+
+                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // timeout 
+                {
+                    var json = t.Result;
+                    var list = DP.ParseCloudJSON(json);
+
+                    return list;
+                }
+                else
+                {
+                    throw new TimeoutException($"device: {device.Address} ID:{device.ID} did not respond in time");
+                }
+
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"error retrieving device data ID={device.ID}");
+                throw new Exception($"error retrieving device data ID={device.ID}", e);
+            }
+
+        }
+
+        // ReSharper disable once InconsistentNaming
+        public async Task<List<DP>> GetDPLocalAsync(TuyaExtendedDeviceInformation device)
         {
             _logger.LogDebug($"Poll data from {device.Address} ID:{device.ID} Key:{device.Key}");
             if (string.IsNullOrEmpty(device.ID))
