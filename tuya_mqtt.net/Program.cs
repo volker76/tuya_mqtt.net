@@ -15,7 +15,6 @@ namespace tuya_mqtt.net
 
         public static void Main(string[] args)
         {
-            //WebApplicationOptions options = new WebApplicationOptions() { Args = args, WebRootPath = "/app/webroot", ContentRootPath= "/app/webroot" };
             var builder = WebApplication.CreateBuilder(args);
 
             builder.Logging.AddInternalLogger();
@@ -30,7 +29,7 @@ namespace tuya_mqtt.net
             builder.Services.AddSingleton<MqttClientService>();
             builder.Services.AddSingleton<MqttSubscriptionService>();
             builder.Services.AddSingleton<LogNotificationService>();
-            builder.Services.AddSingleton<BrowserService>();
+            builder.Services.AddTransient<BrowserService>();
 
             builder.Services.Configure<TuyaCommunicatorOptions>(
                 builder.Configuration.GetSection("Tuya"));

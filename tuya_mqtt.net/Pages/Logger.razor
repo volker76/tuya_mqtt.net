@@ -39,6 +39,7 @@
         {
             try
             {
+                LocalLogger.LogInformation($"OnResize {_myElementReference}", _myElementReference);
                 var rect = await Browser.GetElementClientRectAsync(_myElementReference);
 
                 CalculateNewLogComponentHeight(newSize, rect);
