@@ -2,13 +2,14 @@
 @using com.clusterrr.TuyaNet;
 @using tuya_mqtt.net.Data
 @using tuya_mqtt.net.Services;
+@using tuya_mqtt.net.Helper;
 @inject TuyaCommunicatorService TuyaService;
 @inject TuyaConnectedDeviceService TuyaConnectedDevices;
 @inject NavigationManager NavManager
-@inject BrowserService Browser;
 @inject IJSRuntime JS;
 @inject ISnackbar Snackbar;
 @inject ILogger<TuyaDevices> Logger;
+@inject ILogger<BrowserService> BrowserServiceLogger;
 
 
 <PageTitle>Tuya Devices</PageTitle>
@@ -74,6 +75,7 @@
 </MudExpansionPanels>
 
 @code {
+    private BrowserService Browser;
     private bool _isInWait = false;
     private MudExpansionPanel? _expansionList = null;
     private MudExpansionPanel? _expansionAdd = null;
@@ -115,13 +117,21 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Browser = new BrowserService(BrowserServiceLogger);
         Snackbar.Clear();
         _tuyaScannedDevices = TuyaService.GetTuyaScanDevices();
         _tuyaMonitoredDevices = TuyaConnectedDevices.GetMonitoredDevices();
         _tuyaMonitoredData = TuyaConnectedDevices.GetMonitoredData();
         TuyaConnectedDevices.OnDataUpdate += OnTuyaDataUpdate;
         TuyaService.OnTuyaScannerUpdate += OnTuyaScannerUpdate;
-        await Browser.InitAsync(JS);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Browser.InitAsync(JS);
+        }
     }
 
     public void GoSettings()

@@ -1,6 +1,7 @@
 ﻿@page "/logger"
 @using tuya_mqtt.net.Data;
 @using tuya_mqtt.net.Services;
+@using tuya_mqtt.net.Helper;
 @inject IJSRuntime JS
 @inject ILogger<Logger> LocalLogger
 @inject ILoggerFactory LoggerFactory
@@ -49,7 +50,9 @@
         {
             try
             {
+#if DEBUG
                 LocalLogger.LogInformation($"OnResize {_myElementReference}", _myElementReference);
+#endif
                 var rect = await Browser.GetElementClientRectAsync(_myElementReference);
 
                 CalculateNewLogComponentHeight(newSize, rect);
@@ -66,7 +69,7 @@
         }
     }
 
-    private void CalculateNewLogComponentHeight(WindowSize viewportSize, BoundingClientRect logComponentClientRect)
+    private void CalculateNewLogComponentHeight(WindowSize viewportSize, BrowserService.BoundingClientRect logComponentClientRect)
     {
 #warning TODO - find out where this offset of ~66 come from
         LogWindowHeight = viewportSize.Height - (int)logComponentClientRect.Top - 66;
