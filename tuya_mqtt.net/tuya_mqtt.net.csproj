@@ -24,10 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Remove="wwwroot\doc\logo.png" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Remove="README.md" />
     <None Remove="Resources\BuildDate.txt" />
   </ItemGroup>
@@ -49,10 +45,6 @@
 	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 	  </EmbeddedResource>
 	  <EmbeddedResource Include="Resources\BuildDate.txt" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <None Include="wwwroot\doc\logo.png" />
 	</ItemGroup>
 
 </Project>
