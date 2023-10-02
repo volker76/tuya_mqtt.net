@@ -266,7 +266,7 @@ namespace tuya_mqtt.net.Services
                 }
                 else
                 {
-                    throw new TimeoutException($"device: {device.Address} ID:{device.ID} did not respond in time");
+                    throw new TimeoutException($"device: ID:{device.ID} did not respond in time");
                 }
 
             }
@@ -322,9 +322,58 @@ namespace tuya_mqtt.net.Services
                 throw new Exception(e.Message);
             }
         }
+        public async Task<List<DP>> SetDPAsync(TuyaExtendedDeviceInformation device, int dpNumber, string value)
+        {
+            if (device.CloudMode)
+            {
+                return await SetDPCloudAsync(device, dpNumber, value);
+            }
+            else
+            {
+                return await SetDPLocalAsync(device, dpNumber, value);
+            }
+        }
+        // ReSharper disable once InconsistentNaming
+        public async Task<List<DP>> SetDPCloudAsync(TuyaExtendedDeviceInformation device, int dpNumber, string value)
+        {
+            _logger.LogDebug($"Set data to {device.Address} ID:{device.ID} Key:{device.Key}");
+            if (string.IsNullOrEmpty(device.ID))
+                throw new ArgumentOutOfRangeException(nameof(device.ID), "ID cannot be empty");
+            if (!TuyaApiConfigured)
+                throw new InvalidOperationException("No cloud credentials configured");
+
+            try
+            {
+                var api = new TuyaApi(region: Options.TuyaAPIRegion, accessId: Options.TuyaAPIAccessID, apiSecret: Options.TuyaAPISecret);
+                value = CorrectBool(value); // bool values True / False must be lower letters for JSON
+
+#warning need to implement the set function
+                Task<string> t = api.RequestAsync(TuyaApi.Method.GET,
+                    $"v2.0/cloud/thing/{device.ID}/shadow/properties");
+
+                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // timeout 
+                {
+                    var json = t.Result;
+                    var list = DP.ParseCloudJSON(json);
+
+                    return list;
+                }
+                else
+                {
+                    throw new TimeoutException($"device: ID:{device.ID} did not respond in time");
+                }
+
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"error setting cloud ID={device.ID}:{dpNumber} to '{value}'");
+                throw new Exception($"error setting cloud ID={device.ID}:{dpNumber} to '{value}'", e);
+            }
+
+        }
 
         // ReSharper disable once InconsistentNaming
-        internal async Task<List<DP>> SetDPAsync(TuyaExtendedDeviceInformation device, int dpNumber, string value)
+        public async Task<List<DP>> SetDPLocalAsync(TuyaExtendedDeviceInformation device, int dpNumber, string value)
         {
             _logger.LogDebug($"Set data to {device.Address} ID:{device.ID} Key:{device.Key}");
             if (string.IsNullOrEmpty(device.ID))
