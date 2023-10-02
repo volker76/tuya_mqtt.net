@@ -182,7 +182,7 @@
             _isInWait = true;
             StateHasChanged();
             
-            await TuyaService.TestAPIAsync(_accessId, _accessSecret, TuyaApiRegion);
+            await TuyaService.TestCloudAPIAsync(_accessId, _accessSecret, TuyaApiRegion);
 
             Snackbar.Add("API connection successful", Severity.Success);
             Logger.LogInformation($"Test connection to Tuya API successful.");

@@ -73,22 +73,30 @@ namespace tuya_mqtt.net.Data
 
         private void CleanupDictionary()
         {
-            foreach (var i in _dictionary)
+            try
             {
-                if (!_cachedData.TryGetValue<byte>(i.Key, out _))
-                {
-                    LockCookie lc = _rwl.UpgradeToWriterLock(TimeOut);
-                    try
-                    {
-                        _dictionary.Remove(i.Key);
-                    }
-                    finally
-                    {
-                        _rwl.DowngradeFromWriterLock(ref lc);
-                    }
 
-                    OnListUpdated?.Invoke(this, i.Value);
+                foreach (var i in _dictionary)
+                {
+                    if (!_cachedData.TryGetValue<byte>(i.Key, out _))
+                    {
+                        LockCookie lc = _rwl.UpgradeToWriterLock(TimeOut);
+                        try
+                        {
+                            _dictionary.Remove(i.Key);
+                        }
+                        finally
+                        {
+                            _rwl.DowngradeFromWriterLock(ref lc);
+                        }
+
+                        OnListUpdated?.Invoke(this, i.Value);
+                    }
                 }
+            }
+            catch 
+            { 
+                //ignore
             }
         }
 

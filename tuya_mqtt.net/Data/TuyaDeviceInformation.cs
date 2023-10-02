@@ -11,6 +11,7 @@ namespace tuya_mqtt.net.Data
             this.Address = device.Address;
             this.Key = device.Key;  
             this.ProtocolVersion = device.ProtocolVersion;
+            this.CloudMode = device.CloudMode;
         }
 
         public TuyaDeviceInformation()
@@ -22,6 +23,7 @@ namespace tuya_mqtt.net.Data
         public string Key { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
         public TuyaProtocolVersion ProtocolVersion { get; set; } = TuyaProtocolVersion.V33;
+        public bool CloudMode { get; set; } = false;
 
     }
 

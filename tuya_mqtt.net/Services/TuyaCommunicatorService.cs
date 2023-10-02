@@ -5,6 +5,8 @@ using com.clusterrr.TuyaNet;
 using System.Security.Cryptography;
 using MudBlazor;
 using Newtonsoft.Json.Linq;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace tuya_mqtt.net.Services
 {
@@ -149,28 +151,71 @@ namespace tuya_mqtt.net.Services
 
         public async Task<List<DP>> TestConnect(TuyaDeviceInformation device)
         {
+            if (device.CloudMode)
+                return await TestConnectCloud(device);
+            else
+                return await TestConnectLocal(device);
             
+        }
+        public async Task<List<DP>> TestConnectCloud(TuyaDeviceInformation device)
+        {
+            _logger.LogDebug($"TestConnect to cloud for ID:{device.ID}");
+            if (string.IsNullOrEmpty(device.ID))
+                throw new ArgumentOutOfRangeException(nameof(device.ID), "ID cannot be empty");
+            if (!TuyaApiConfigured)
+                throw new InvalidOperationException("No cloud credentials configured");
+
+
+            try
+            {
+                var api = new TuyaApi(region: Options.TuyaAPIRegion, accessId: Options.TuyaAPIAccessID, apiSecret: Options.TuyaAPISecret);
+
+                Task<string> t = api.RequestAsync(TuyaApi.Method.GET,
+                    $"v2.0/cloud/thing/{device.ID}/shadow/properties");
+
+                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // timeout 
+                {
+                    var json = t.Result;
+                    var list = DP.ParseCloudJSON(json);
+
+                    return list;
+                }
+                else
+                {
+                    throw new TimeoutException($"device: {device.Address} ID:{device.ID} did not respond in time");
+                }
+
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"error testing device {device.ID}");
+                throw new Exception($"error testing device {device.ID}", e);
+            }
+
+        }
+        public async Task<List<DP>> TestConnectLocal(TuyaDeviceInformation device)
+        {
             _logger.LogDebug($"TestConnect to {device.Address} ID:{device.ID} Key:{device.Key}");
             if (string.IsNullOrEmpty(device.ID))
-                throw new ArgumentOutOfRangeException(nameof(device.ID),"ID cannot be empty");
+                throw new ArgumentOutOfRangeException(nameof(device.ID), "ID cannot be empty");
             if (string.IsNullOrEmpty(device.Key))
                 throw new ArgumentOutOfRangeException(nameof(device.Key), "Key cannot be empty");
             try
             {
                 var dev = new TuyaDevice(device.Address, device.Key.Trim(), device.ID.Trim(), device.ProtocolVersion);
-                var jsonIn=dev.FillJson("");
+                var jsonIn = dev.FillJson("");
                 byte[] request = dev.EncodeRequest(TuyaCommand.DP_QUERY, jsonIn);
 
 
                 var t = dev.SendAsync(request);
 
-                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // timeout 
+                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // no timeout 
                 {
                     byte[] encryptedResponse = t.Result;
                     TuyaLocalResponse response = dev.DecodeResponse(encryptedResponse);
                     string json = response.JSON;
                     _logger.LogDebug($"TestConnect to {device.Address} returned data set {json}");
-                    var list = DP.ParseJSON(json);
+                    var list = DP.ParseLocalJSON(json);
 
                     return list;
                 }
@@ -211,7 +256,7 @@ namespace tuya_mqtt.net.Services
                     TuyaLocalResponse response = dev.DecodeResponse(encryptedResponse);
                     string json = response.JSON;
                     _logger.LogInformation($"Get DPs from {device.Address}'{device.ID}' returned data set {json}");
-                    var list = DP.ParseJSON(json);
+                    var list = DP.ParseLocalJSON(json);
 
                     return list;
                 }
@@ -258,7 +303,7 @@ namespace tuya_mqtt.net.Services
                     TuyaLocalResponse response = dev.DecodeResponse(encryptedResponse);
                     string json = response.JSON;
                     _logger.LogInformation($"Get DPs from {device.Address}'{device.ID}' returned data set {json}");
-                    var list = DP.ParseJSON(json);
+                    var list = DP.ParseLocalJSON(json);
 
                     return list;
                 }
@@ -293,7 +338,7 @@ namespace tuya_mqtt.net.Services
         }
 
         // ReSharper disable once InconsistentNaming
-        public async Task TestAPIAsync(string apiKey, string apiSecret, TuyaApi.Region region)
+        public async Task TestCloudAPIAsync(string apiKey, string apiSecret, TuyaApi.Region region)
         {
             try
             { 
