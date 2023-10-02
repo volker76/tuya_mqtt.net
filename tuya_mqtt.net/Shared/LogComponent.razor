@@ -7,8 +7,9 @@
 @inject LogNotificationService LogService;
 @inject ILogger<LogComponent> Logger;
 @inject ILogger<BrowserService> BrowserServiceLogger;
+@* ReSharper disable once InconsistentNaming *@
 @inject IJSRuntime JS;
-
+@* ReSharper disable UnknownCssClass *@
 
 <script suppress-error="BL9992">
     window.downloadFileFromStream = async (fileName, contentStreamReference) => {
@@ -33,7 +34,9 @@
         }
 
         <div class="flex-shrink-1" style="width:100%"></div>
+        
         <div class="flex-none " style="width:64px">
+            
             <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Size="Size.Medium" OnClick="SaveLogAsync" />
         </div>
     </div>
@@ -45,12 +48,13 @@
     </MudDataGrid>
        
 </MudPaper>
+@* ReSharper restore UnknownCssClass *@
 
 @code {
     private List<LogItem> _logitems = new List<LogItem>();
     private bool ScrollBottom { get; set; } = true;
 
-    private BrowserService Browser;
+    private BrowserService? _browser;
 
     [ParameterAttribute]
     public int Height { get; set; } = 0;
@@ -58,9 +62,9 @@
     [ParameterAttribute]
     public int Width { get; set; } = 0;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        Browser = new BrowserService(BrowserServiceLogger);
+        _browser = new BrowserService(BrowserServiceLogger);
         
         LogService.OnLogAdded += LogAdded;
         foreach (var item in LogService.GetLogItems())
@@ -87,7 +91,7 @@
     {
         if (firstRender)
         {
-            await Browser.InitAsync(JS);
+            await _browser!.InitAsync(JS);
         }
 
         await ScrollToEndAsync();
@@ -107,7 +111,7 @@
         return Width.ToString() + "px";
     }
 
-    private Func<LogItem, int, string> RowStyleFunc => (x, i) =>
+    private Func<LogItem, int, string> RowStyleFunc => (x, _) =>
     {
         if (x.LogLevel == LogLevel.Error)
             return "background-color:#DF787E";
@@ -136,8 +140,10 @@
     {
         if (ScrollBottom)
         {
+#pragma warning disable CS1030
 #warning this is ugly as we don't know if there may be multiple scollable elements on the page'
-            return Browser.ScrollClassIntoView("tfoot.mud-table-foot", 0);
+#pragma warning restore CS1030
+            return _browser!.ScrollClassIntoView("tfoot.mud-table-foot", 0);
         }
        
         return Task.CompletedTask;

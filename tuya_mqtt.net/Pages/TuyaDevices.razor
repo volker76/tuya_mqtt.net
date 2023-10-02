@@ -75,7 +75,7 @@
 </MudExpansionPanels>
 
 @code {
-    private BrowserService Browser;
+    private BrowserService? Browser;
     private bool _isInWait = false;
     private MudExpansionPanel? _expansionList = null;
     private MudExpansionPanel? _expansionAdd = null;
@@ -115,7 +115,7 @@
             return $"{t*1000.0}ms";
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         Browser = new BrowserService(BrowserServiceLogger);
         Snackbar.Clear();
@@ -130,7 +130,7 @@
     {
         if (firstRender)
         {
-            await Browser.InitAsync(JS);
+            await Browser!.InitAsync(JS);
         }
     }
 
@@ -187,7 +187,7 @@
         _expansionAdd?.Expand(true);
         await InvokeAsync(StateHasChanged);
         await Task.Delay(500);
-        Browser.ScrollClassIntoView("div.AddSection", 0).AndForget();
+        Browser!.ScrollClassIntoView("div.AddSection", 0).AndForget();
         await InvokeAsync(StateHasChanged);
     }
 

@@ -1,14 +1,9 @@
-﻿
-using Abp.Threading;
+﻿using Abp.Threading;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using MQTTnet;
 using MQTTnet.Client;
 using MQTTnet.Exceptions;
-using MQTTnet.Server;
-using System.Collections.Concurrent;
-using System.Threading;
-using System.Xml.Linq;
 using tuya_mqtt.net.Data;
 using tuya_mqtt.net.Helper;
 using MqttClientOptions = tuya_mqtt.net.Data.MqttClientOptions;
@@ -23,21 +18,21 @@ namespace tuya_mqtt.net.Services
         private IMqttClient? _mqttClient;
         private string _brokerVersion = String.Empty;
         private bool _autoReconnect;
-        private readonly IServiceProvider _serviceProvider; 
         private readonly IMqttSubscriptionService _subscriptionService;
         private readonly MemoryCache _publishedDataCache = new MemoryCache(new MemoryCacheOptions());
+        private readonly IOptionsMonitor<GlobalOptions> _globalOptions;
 
         // ReSharper disable once InconsistentNaming
-        private readonly MemoryCacheEntryOptions CacheEntryOptions =  new MemoryCacheEntryOptions()
+        private readonly MemoryCacheEntryOptions CacheEntryOptions = new MemoryCacheEntryOptions()
             .SetSize(50000) //Size amount
-            //Priority on removing when reaching size limit (memory pressure)
+                            //Priority on removing when reaching size limit (memory pressure)
             .SetPriority(CacheItemPriority.High)
             // Remove from cache after this time, regardless of sliding expiration
             .SetAbsoluteExpiration(TimeSpan.FromSeconds(30));
 
 
         private MqttClientOptions _options;
-        
+
         private const string MqttVersionTopic = "$SYS/broker/version";
 
         public MqttClientOptions Options
@@ -53,21 +48,26 @@ namespace tuya_mqtt.net.Services
         private MqttClientOptions PrevOptions
         { get; set; }
 
-        public GlobalOptions GlobalOptions { get; }
+        public GlobalOptions GlobalOptions
+        {
+            get
+            {
+                return _globalOptions.CurrentValue;
+            }
+        }
 
-        public MqttClientService(IServiceProvider sp, ILogger<MqttClientService> logger, IOptionsMonitor<MqttClientOptions> options, 
-            IOptions<GlobalOptions> glob_options, MqttSubscriptionService subscriptionService)
+        public MqttClientService(ILogger<MqttClientService> logger, IOptionsMonitor<MqttClientOptions> options,
+            IOptionsMonitor<GlobalOptions> globOptions, MqttSubscriptionService subscriptionService)
         {
             _logger = logger;
             _options = options.CurrentValue;
-            GlobalOptions = glob_options.Value;
+            _globalOptions = globOptions;
             PrevOptions = Options;
-            _serviceProvider = sp;
             _mqttfactory = new MqttFactory();
             _autoReconnect = false;
             _subscriptionService = subscriptionService;
 
-            new Timer(MqttHeartbeat, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(10));
+            _ = new Timer(MqttHeartbeat, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(10));
 
             options.OnChange(OnClientOptionsChanged);
 
@@ -168,9 +168,9 @@ namespace tuya_mqtt.net.Services
                 _brokerVersion = arg.ApplicationMessage.ConvertPayloadToString();
                 _logger.LogInformation($"subscription broker version received as '{_brokerVersion}'");
 
-                return Task.FromResult<bool>(true);
+                return Task.FromResult(true);
             }
-            return Task.FromResult<bool>(false);
+            return Task.FromResult(false);
         }
 
         private async Task ApplicationMessageReceivedAsync(MqttApplicationMessageReceivedEventArgs arg)
@@ -179,10 +179,12 @@ namespace tuya_mqtt.net.Services
 
             _logger.LogInformation($"subscription message incoming '{arg.ApplicationMessage.Topic}'");
             if (await CheckHandleSystemSubscriptionsAsync(arg))
-                return ;
+                // ReSharper disable once RedundantJumpStatement
+                return;
 
             if (await CheckDeviceSubscriberAsync(arg))
-                return ;
+                // ReSharper disable once RedundantJumpStatement
+                return;
         }
 
         private async Task<bool> CheckDeviceSubscriberAsync(MqttApplicationMessageReceivedEventArgs arg)
@@ -190,7 +192,7 @@ namespace tuya_mqtt.net.Services
             var ret = await _subscriptionService.SubscriberMessageReceivedAsync(arg.ApplicationMessage);
 
             return ret;
-            
+
         }
 
         private IMqttClient? CreateClient(MqttFactory factory)
@@ -238,11 +240,11 @@ namespace tuya_mqtt.net.Services
             if (!newOptions.Equals(PrevOptions))
             {
                 _logger.LogInformation($"MQTT Client Settings changed");
-                _logger.LogDebug($"MQTT Client Settings old {PrevOptions.ToString()} new {Options.ToString()}");
+                _logger.LogDebug($"MQTT Client Settings old {PrevOptions} new {Options}");
                 Options = newOptions;
 
                 await ReconnectMqttBrokerAsync();
-                
+
             }
 
         }
@@ -279,8 +281,6 @@ namespace tuya_mqtt.net.Services
                 _logger.LogInformation("MQTT establish reconnection");
                 await ReconnectMqttBrokerAsync();
             }
-
-            return;
         }
 
         public bool IsConnected
@@ -322,8 +322,8 @@ namespace tuya_mqtt.net.Services
             // Dispose of unmanaged resources.
             if (_mqttClient != null)
             {
-                _subscriptionService.ClearAll() ;
-               
+                _subscriptionService.ClearAll();
+
                 if (_mqttClient.IsConnected)
                 {
                     try
@@ -353,10 +353,10 @@ namespace tuya_mqtt.net.Services
         {
             get
             {
-                if (string.IsNullOrEmpty(Options.MqttTopic)) 
+                if (string.IsNullOrEmpty(Options.MqttTopic))
                     return "";
-                
-                return Options.MqttTopic.Trim(StringHelper.WhiteSpaceCharsPlus(new[]{'/','\\'})) + "/";
+
+                return Options.MqttTopic.Trim(StringHelper.WhiteSpaceCharsPlus(new[] { '/', '\\' })) + "/";
             }
         }
 
@@ -407,7 +407,8 @@ namespace tuya_mqtt.net.Services
                 _logger.LogWarning("RemoveSubscriptionAsync - broker not connected");
             return false;
         }
-        public async Task<IEnumerable<Tuple<DP,string>>> PublishAsync(string ID, string name, List<DP> dpList)
+        // ReSharper disable once InconsistentNaming
+        public async Task<IEnumerable<Tuple<DP, string>>> PublishAsync(string ID, string name, List<DP> dpList)
         {
             List<Tuple<DP, string>> topics = new List<Tuple<DP, string>>();
             string baseTopic = GlobalMqttTopic + name.Trim();
@@ -423,9 +424,9 @@ namespace tuya_mqtt.net.Services
                 {
                     try
                     {
-                        
+
                         topic = baseTopic + "/" + $"DP{dp.DPNumber}";
-                        topics.Add(new Tuple<DP, string>(dp,topic));
+                        topics.Add(new Tuple<DP, string>(dp, topic));
 
                         bool updateBroker = true;
 
@@ -482,11 +483,11 @@ namespace tuya_mqtt.net.Services
 
             try
             {
-                var Timestamp = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
+                var timestamp = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
 
                 var applicationMessage = new MqttApplicationMessageBuilder()
                     .WithTopic(topic)
-                    .WithPayload(Timestamp.ToString())
+                    .WithPayload(timestamp.ToString())
                     .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
                     .Build();
 
@@ -499,5 +500,6 @@ namespace tuya_mqtt.net.Services
         }
     }
 
-    
+
 }
+

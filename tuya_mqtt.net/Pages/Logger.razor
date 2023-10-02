@@ -1,10 +1,9 @@
 ﻿@page "/logger"
 @using tuya_mqtt.net.Data;
-@using tuya_mqtt.net.Services;
 @using tuya_mqtt.net.Helper;
+@* ReSharper disable once InconsistentNaming *@
 @inject IJSRuntime JS
 @inject ILogger<Logger> LocalLogger
-@inject ILoggerFactory LoggerFactory
 @inject ILogger<BrowserService> BrowserServiceLogger;
 
 <component type="typeof(Logger)" render-mode="Server" />
@@ -19,25 +18,25 @@
 
     private ElementReference _myElementReference;
 
-    private int LogWindowHeight { get; set; } = 0;
+    private int LogWindowHeight { get; set; }
 
-    private BrowserService Browser;
+    private BrowserService? _browser;
 
     protected override void OnInitialized()
     {
-        Browser = new BrowserService(BrowserServiceLogger);
+        _browser = new BrowserService(BrowserServiceLogger);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await Browser.InitAsync(JS);
-            Browser.Resize += OnResize;
+            await _browser!.InitAsync(JS);
+            _browser!.Resize += OnResize;
 
-            var rect = await Browser.GetElementClientRectAsync(_myElementReference);
+            var rect = await _browser.GetElementClientRectAsync(_myElementReference);
 
-            CalculateNewLogComponentHeight(new WindowSize() { Height = Browser.BrowserHeight, Width = Browser.BrowserWidth }, rect);
+            CalculateNewLogComponentHeight(new WindowSize() { Height = _browser!.BrowserHeight, Width = _browser!.BrowserWidth }, rect);
             StateHasChanged();
         }
         
@@ -46,14 +45,14 @@
 
     private async void OnResize(object? obj, WindowSize newSize)
     {
-        if (Browser.IsInitialized)
+        if (_browser!.IsInitialized)
         {
             try
             {
 #if DEBUG
                 LocalLogger.LogInformation($"OnResize {_myElementReference}", _myElementReference);
 #endif
-                var rect = await Browser.GetElementClientRectAsync(_myElementReference);
+                var rect = await _browser!.GetElementClientRectAsync(_myElementReference);
 
                 CalculateNewLogComponentHeight(newSize, rect);
                 StateHasChanged();
@@ -71,7 +70,9 @@
 
     private void CalculateNewLogComponentHeight(WindowSize viewportSize, BrowserService.BoundingClientRect logComponentClientRect)
     {
+#pragma warning disable CS1030
 #warning TODO - find out where this offset of ~66 come from
+#pragma warning restore CS1030
         LogWindowHeight = viewportSize.Height - (int)logComponentClientRect.Top - 66;
     }
 
