@@ -6,8 +6,9 @@
 
 @inject LogNotificationService LogService;
 @inject ILogger<LogComponent> Logger;
+@inject ILogger<BrowserService> BrowserServiceLogger;
 @inject IJSRuntime JS;
-@inject IBrowserService Browser
+
 
 <script suppress-error="BL9992">
     window.downloadFileFromStream = async (fileName, contentStreamReference) => {
@@ -49,6 +50,8 @@
     private List<LogItem> _logitems = new List<LogItem>();
     private bool ScrollBottom { get; set; } = true;
 
+    private BrowserService Browser;
+
     [ParameterAttribute]
     public int Height { get; set; } = 0;
 
@@ -57,7 +60,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await Browser.InitAsync(JS);
+        Browser = new BrowserService(BrowserServiceLogger);
+        
         LogService.OnLogAdded += LogAdded;
         foreach (var item in LogService.GetLogItems())
         {
@@ -65,6 +69,7 @@
             this.StateHasChanged();
         }
     }
+
 
     private bool DebugMode
     {
@@ -78,9 +83,14 @@
         }
     }
 
-    protected override Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        return ScrollToEndAsync();
+        if (firstRender)
+        {
+            await Browser.InitAsync(JS);
+        }
+
+        await ScrollToEndAsync();
     }
 
     private string GetHeight()

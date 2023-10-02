@@ -29,7 +29,7 @@ namespace tuya_mqtt.net
             builder.Services.AddSingleton<MqttClientService>();
             builder.Services.AddSingleton<MqttSubscriptionService>();
             builder.Services.AddSingleton<LogNotificationService>();
-            builder.Services.AddTransient<IBrowserService,BrowserService>();
+            //builder.Services.AddTransient<IBrowserService,BrowserService>();
 
             builder.Services.Configure<TuyaCommunicatorOptions>(
                 builder.Configuration.GetSection("Tuya"));

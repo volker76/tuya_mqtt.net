@@ -2,8 +2,10 @@
 @using tuya_mqtt.net.Data;
 @using tuya_mqtt.net.Services;
 @inject IJSRuntime JS
-@inject IBrowserService Browser
 @inject ILogger<Logger> LocalLogger
+@inject ILoggerFactory LoggerFactory
+@inject ILogger<BrowserService> BrowserServiceLogger;
+
 <component type="typeof(Logger)" render-mode="Server" />
 
 <PageTitle>Log</PageTitle>
@@ -17,6 +19,13 @@
     private ElementReference _myElementReference;
 
     private int LogWindowHeight { get; set; } = 0;
+
+    private BrowserService Browser;
+
+    protected override void OnInitialized()
+    {
+        Browser = new BrowserService(BrowserServiceLogger);
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
