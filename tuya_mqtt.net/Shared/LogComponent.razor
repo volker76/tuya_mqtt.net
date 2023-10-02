@@ -7,7 +7,7 @@
 @inject LogNotificationService LogService;
 @inject ILogger<LogComponent> Logger;
 @inject IJSRuntime JS;
-@inject BrowserService Browser;
+@inject IBrowserService Browser
 
 <script suppress-error="BL9992">
     window.downloadFileFromStream = async (fileName, contentStreamReference) => {

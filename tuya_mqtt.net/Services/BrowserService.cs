@@ -5,8 +5,29 @@ using tuya_mqtt.net.Data;
 
 namespace tuya_mqtt.net.Services
 {
-
-    public class BrowserService
+    public class BoundingClientRect
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double Width { get; set; }
+        public double Height { get; set; }
+        public double Top { get; set; }
+        public double Right { get; set; }
+        public double Bottom { get; set; }
+        public double Left { get; set; }
+    }
+    public interface IBrowserService
+    {
+        
+        public Task InitAsync(IJSRuntime js);
+        public event EventHandler<WindowSize>? Resize;
+        public Task<BoundingClientRect> GetElementClientRectAsync(ElementReference element);
+        public Task ScrollClassIntoView(string classSearchString, int index);
+        public int BrowserWidth { get; }
+        public int BrowserHeight { get; }
+        public bool IsInitialized { get; }
+    }
+    public class BrowserService : IBrowserService
     {
         public class BoundingClientRect
         {
@@ -157,13 +178,13 @@ namespace tuya_mqtt.net.Services
             }
         }
 
-        public async Task<BoundingClientRect> GetElementClientRectAsync(ElementReference element)
+        public async Task<Services.BoundingClientRect> GetElementClientRectAsync(ElementReference element)
         {
             if (_jsModule == null)
             {
                 throw new InvalidOperationException("BrowserService is not initialized. run Init() before.");
             }
-            var result = await _jsModule.InvokeAsync<BoundingClientRect>("MyGetBoundingClientRect", element);
+            var result = await _jsModule.InvokeAsync<Services.BoundingClientRect>("MyGetBoundingClientRect", element);
             _logger.LogDebug($"GetBoundingClientRect ({result.Width},{result.Height})");
             return result;
         }
