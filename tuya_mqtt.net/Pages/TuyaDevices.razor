@@ -2,14 +2,15 @@
 @using com.clusterrr.TuyaNet;
 @using tuya_mqtt.net.Data
 @using tuya_mqtt.net.Services;
+@using tuya_mqtt.net.Helper;
 @inject TuyaCommunicatorService TuyaService;
 @inject TuyaConnectedDeviceService TuyaConnectedDevices;
 @inject NavigationManager NavManager
-@inject BrowserService Browser;
 @* ReSharper disable once InconsistentNaming *@
 @inject IJSRuntime JS;
 @inject ISnackbar Snackbar;
 @inject ILogger<TuyaDevices> Logger;
+@inject ILogger<BrowserService> BrowserServiceLogger;
 
 
 <PageTitle>Tuya Devices</PageTitle>
@@ -79,6 +80,7 @@
 </MudExpansionPanels>
 @* ReSharper restore UnknownCssClass *@
 @code {
+    private BrowserService? _browser;
     private bool _isInWait;
     private MudExpansionPanel? _expansionList;
     private MudExpansionPanel? _expansionAdd;
@@ -118,15 +120,24 @@
             return $"{t*1000.0}ms";
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
+        _browser = new BrowserService(BrowserServiceLogger);
         Snackbar.Clear();
         _tuyaScannedDevices = TuyaService.GetTuyaScanDevices();
         _tuyaMonitoredDevices = TuyaConnectedDevices.GetMonitoredDevices();
         _tuyaMonitoredData = TuyaConnectedDevices.GetMonitoredData();
         TuyaConnectedDevices.OnDataUpdate += OnTuyaDataUpdate;
         TuyaService.OnTuyaScannerUpdate += OnTuyaScannerUpdate;
-        await Browser.InitAsync(JS);
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await _browser!.InitAsync(JS);
+        }
     }
 
     public void GoSettings()
@@ -209,10 +220,11 @@
         _expansionAdd?.Expand();
         await InvokeAsync(StateHasChanged);
         await Task.Delay(500);
-        Browser.ScrollClassIntoView("div.AddSection", 0).AndForget();
+        _browser!.ScrollClassIntoView("div.AddSection", 0).AndForget();
         await InvokeAsync(StateHasChanged);
     }
 
+    // ReSharper disable once InconsistentNaming
     private async Task GetLocalKeyFromAPI()
     {
         try
@@ -230,6 +242,7 @@
         }
     }
 
+    // ReSharper disable once InconsistentNaming
     private async Task GetDeviceNameFromAPI()
     {
         try

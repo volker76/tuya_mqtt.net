@@ -3,10 +3,9 @@ using Microsoft.JSInterop;
 using System.Diagnostics;
 using tuya_mqtt.net.Data;
 
-namespace tuya_mqtt.net.Services
+namespace tuya_mqtt.net.Helper
 {
-
-    public class BrowserService
+    public class BrowserService 
     {
         public class BoundingClientRect
         {
@@ -19,7 +18,6 @@ namespace tuya_mqtt.net.Services
             public double Bottom { get; set; }
             public double Left { get; set; }
         }
-
         // ReSharper disable once InconsistentNaming
         // ReSharper disable once RedundantDefaultMemberInitializer
         private IJSRuntime? JS = null;
@@ -28,7 +26,7 @@ namespace tuya_mqtt.net.Services
         public event EventHandler<WindowSize>? Resize;
         private int _browserWidth;
         private int _browserHeight;
-        private readonly SemaphoreSlim _initLocker = new SemaphoreSlim(1,1);
+
         public BrowserService(ILogger<BrowserService> logger)
         {
             _logger = logger;
@@ -38,13 +36,12 @@ namespace tuya_mqtt.net.Services
 
         public async Task InitAsync(IJSRuntime js)
         {
-            await _initLocker.WaitAsync().ConfigureAwait(false);
             try
             {
                 // enforce single invocation            
                 if (JS == null)
                 {
-                    this.JS = js;
+                    JS = js;
                     try
                     {
                         _jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "/lib/BrowserService.js");
@@ -78,8 +75,7 @@ namespace tuya_mqtt.net.Services
             }
             finally
             {
-                
-                _initLocker.Release(); 
+
 
             }
 
@@ -87,7 +83,7 @@ namespace tuya_mqtt.net.Services
 
         private async Task GetViewPortSize()
         {
-            //await _initLocker.WaitAsync().ConfigureAwait(false);
+           
             try
             {
                 if (_jsModule == null)
@@ -110,7 +106,7 @@ namespace tuya_mqtt.net.Services
             // ReSharper disable once RedundantEmptyFinallyBlock
             finally
             {
-               // _initLocker.Release();
+              
 
             }
         }
@@ -123,7 +119,7 @@ namespace tuya_mqtt.net.Services
                 _browserWidth = jsBrowserWidth;
                 _browserHeight = jsBrowserHeight;
                 _logger.LogDebug($"BrowserService window new size ({_browserWidth},{_browserHeight})");
-                this.Resize?.Invoke(this, new WindowSize() { Width = _browserWidth, Height = _browserHeight });
+                Resize?.Invoke(this, new WindowSize() { Width = _browserWidth, Height = _browserHeight });
             }
             catch (Exception e)
             {
@@ -137,7 +133,7 @@ namespace tuya_mqtt.net.Services
             {
                 if (_browserWidth == 0)
                 {
-                    _logger.LogError( "browserWidth == 0");
+                    _logger.LogError("browserWidth == 0");
                     throw new InvalidOperationException("InitAsync seems not called or not finished yet.");
                 }
                 return _browserWidth;
@@ -175,9 +171,9 @@ namespace tuya_mqtt.net.Services
                 _logger.LogError("ScrollToEnd - no JSModule");
                 throw new InvalidOperationException("BrowserService is not initialized. run Init() before.");
             }
-            
+
             await _jsModule.InvokeVoidAsync("scrollToEnd", element);
-            
+
         }
 
         public async Task ScrollClassIntoView(string classSearchString, int index)

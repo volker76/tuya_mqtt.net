@@ -22,8 +22,8 @@ namespace tuya_mqtt.net.Services
 
         public event EventHandler<TuyaDeviceScanInfo>? OnTuyaScannerUpdate;
 
-        private readonly IOptionsMonitor<TuyaCommunicatorOptions> _options;
-        private TuyaCommunicatorOptions Options => _options.CurrentValue;
+        private readonly IOptionsMonitor<TuyaCommunicatorOptions> _tuyaoptions;
+        private TuyaCommunicatorOptions Options => _tuyaoptions.CurrentValue;
 
         private readonly IOptionsMonitor<GlobalOptions> _globaloptions;
         private GlobalOptions GlobalOptions => _globaloptions.CurrentValue;
@@ -64,11 +64,11 @@ namespace tuya_mqtt.net.Services
             }
         }
 
-        public TuyaCommunicatorService(IServiceProvider sp, ILogger<TuyaCommunicatorService> logger, IOptions<TuyaCommunicatorOptions> options, IOptions<GlobalOptions> globalOptions)
+        public TuyaCommunicatorService(IServiceProvider sp, ILogger<TuyaCommunicatorService> logger, IOptionsMonitor<TuyaCommunicatorOptions> options, IOptionsMonitor<GlobalOptions> globalOptions)
         {
             _logger = logger;
             _serviceProvider = sp;
-            _options = options;
+            _tuyaoptions = options;
             _globaloptions = globalOptions;
 
             _tuyaScanDevices = new TimedDictionary<string, TuyaDeviceScanInfo>(TuyaDeviceExpired);
