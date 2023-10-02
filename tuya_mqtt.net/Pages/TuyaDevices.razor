@@ -173,15 +173,15 @@
             }
 
             _tuyaProtocolVersion = _tuyaMonitoredDevices[id].ProtocolVersion;
+            _tuyaPolltimeValue = _tuyaMonitoredDevices[id].PollingInterval.TotalSeconds;
         }
         else
         {
             _tuyaLocalKey = "";
             _tuyaName = "";
             _tuyaProtocolVersion = pv;
+            _tuyaPolltimeValue = 5; //5 seconds default
         }
-
-        _tuyaPolltimeValue = 5;
 
         _expansionList?.Expand(false);
         _expansionAdd?.Expand(true);
@@ -240,7 +240,8 @@
 
             var device = new Data.TuyaDeviceInformation() { Address = _tuyaDeviceIp, 
                 ID = _tuyaId, 
-                Key = _tuyaLocalKey
+                Key = _tuyaLocalKey,
+                ProtocolVersion = _tuyaProtocolVersion,
             };
             
             _ = await TuyaService.TestConnect(device);
