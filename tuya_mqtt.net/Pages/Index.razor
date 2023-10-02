@@ -5,15 +5,23 @@
 @inject ILogger<Index> Logger
 
 <PageTitle>tuya mqtt.net Status</PageTitle>
-
+@* ReSharper disable UnknownCssClass *@
 <MudCard>
+    <MudCardHeader>
+        <MudText Typo="Typo.button">Version:</MudText>
+        <MudText Class="ml-4">@_versionCompile</MudText>
+        <MudText Class="ml-4">@_versionGit</MudText>
+    </MudCardHeader>
     <MudCardContent>
         <div class="markdown"> @((MarkupString)_readmeHtml) </div>
     </MudCardContent>
 </MudCard>
+@* ReSharper restore UnknownCssClass *@
 @code {
     private MarkdownPipeline? _pipeline;
     private string _readmeHtml = null!;
+    private string _versionCompile = String.Empty;
+    private string _versionGit = String.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -47,6 +55,26 @@
         catch (Exception)
         {
             _readmeHtml = "<b>An error occurred, cannot convert markdown in README.md</b>";
+        }
+
+        try
+        {
+            await using (var reader = embeddedProvider.GetFileInfo("Resources/BuildDate.txt").CreateReadStream()) 
+                                                                                                //Resources/BuildDate.txt is an embedded resource
+            {
+                var sr = new StreamReader(reader);
+                var str = await sr.ReadToEndAsync();
+                string[] strings = str.Split('\n');
+                if (strings.Length > 0) _versionCompile = strings[0];
+                if (strings.Length > 1) _versionGit = strings[1];
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "");
+
+            _versionCompile = "cannot read version information";
+            _versionGit = String.Empty;
         }
     }
 

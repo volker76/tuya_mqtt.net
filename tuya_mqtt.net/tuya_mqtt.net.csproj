@@ -1,11 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-	<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-	<DockerComposeProjectPath>../docker-compose.dcproj</DockerComposeProjectPath>
+      <TargetFramework>net7.0</TargetFramework>
+      <Nullable>enable</Nullable>
+      <ImplicitUsings>enable</ImplicitUsings>
+	  <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+	  <ContainerDevelopmentMode>Fast</ContainerDevelopmentMode>
+	  <DockerfileContext>..</DockerfileContext>
+	  <DockerComposeProjectPath>../docker-compose.dcproj</DockerComposeProjectPath>
 	  <ScopedCssEnabled>true</ScopedCssEnabled>
   </PropertyGroup>
 
@@ -27,6 +29,7 @@
 
   <ItemGroup>
     <None Remove="README.md" />
+    <None Remove="Resources\BuildDate.txt" />
   </ItemGroup>
 
 	<ItemGroup>
@@ -45,6 +48,7 @@
 	  <EmbeddedResource Include="README.md">
 	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 	  </EmbeddedResource>
+	  <EmbeddedResource Include="Resources\BuildDate.txt" />
 	</ItemGroup>
 
 	<ItemGroup>

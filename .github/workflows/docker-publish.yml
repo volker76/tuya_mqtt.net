@@ -32,7 +32,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      
+
+      - name: Git describe
+        id: ghd
+        uses: proudust/gh-describe@v1
+
         # Add support for more platforms with QEMU (optional)
         # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU
@@ -82,4 +86,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7
+          build-args: |
+            GIT_COMMIT=${{ steps.ghd.outputs.describe }}
 

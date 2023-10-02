@@ -400,3 +400,4 @@ DataDir/
 mosquitto/data/mosquitto.db
 tuya_mqtt.net/wwwroot/lib/jquery/
 not public/
+tuya_mqtt.net/Resources/BuildDate.txt

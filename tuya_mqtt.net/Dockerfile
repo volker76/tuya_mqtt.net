@@ -3,16 +3,23 @@ ENV DOTNET_CLI_HOME=/tmp
 WORKDIR /app
 EXPOSE 80
 
+ENV TZ=EUROPE/Berlin
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN apt-get update
+RUN apt install -y tzdata
+RUN apt install -y arping inetutils-ping libnet-ifconfig-wrapper-perl mc
+
+
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
 COPY ["tuya_mqtt.net.csproj", "."]
-RUN dotnet --info
 ENV DOTNET_CLI_HOME=/tmp
-RUN dotnet restore "./tuya_mqtt.net.csproj"
+RUN dotnet restore "tuya_mqtt.net.csproj"
 COPY . .
 WORKDIR "/src/."
 ARG BUILDPLATFORM
 ARG TARGETPLATFORM
+ARG GIT_COMMIT
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     RID=linux-x64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
@@ -21,7 +28,9 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     RID=linux-arm ; \
     fi \
     && echo "target $TARGETPLATFORM build $BUILDPLATFORM RID $RID" \
-    && dotnet build "tuya_mqtt.net.csproj" -r $RID -c Release -o /app/build
+    && date > "/src/Resources/BuildDate.txt" \
+    && echo $GIT_COMMIT >> "/src/Resources/BuildDate.txt" \
+    && dotnet build "tuya_mqtt.net.csproj" -r $RID --self-contained -c Release -o /app/build
 
 FROM build AS publish
 ARG BUILDPLATFORM

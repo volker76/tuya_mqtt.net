@@ -25,10 +25,12 @@
 <MudPaper Width="@GetWidth()" Height="@GetHeight()">
     <div class="d-flex flex-row flex-grow-1 gap-4">
         <MudSwitch @bind-Checked="@ScrollBottom" Label="Keep scroll to bottom" Color="Color.Primary"/>
-        @if (Debugger.IsAttached)
+
+        @if (DebugMode && Debugger.IsAttached)
         {
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick=@TestErrorLog>TestLog</MudButton>
         }
+
         <div class="flex-shrink-1" style="width:100%"></div>
         <div class="flex-none " style="width:64px">
             <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Size="Size.Medium" OnClick="SaveLogAsync" />
@@ -61,6 +63,18 @@
         {
             _logitems.Add(item);
             this.StateHasChanged();
+        }
+    }
+
+    private bool DebugMode
+    {
+        get
+        {
+#if (DEBUG)
+            return true;
+#else
+            return false;
+#endif
         }
     }
 

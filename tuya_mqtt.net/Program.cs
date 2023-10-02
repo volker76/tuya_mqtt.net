@@ -1,5 +1,4 @@
 using Awesome.Net.WritableOptions.Extensions;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
 using tuya_mqtt.net.Data;
@@ -14,10 +13,6 @@ namespace tuya_mqtt.net
         private const string DataFile = "DataDir/MQTTsettings.json";
         private static ILogger<Program>? _logger;
 
-        private static ConfigurationReloadToken _changeToken = new ConfigurationReloadToken();
-        private static byte[] _configFileHash1 = new byte[20];
-        private static byte[] _configFileHash2 = new byte[20];
-        private static byte[] _configFileHash3 = new byte[20];
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
@@ -34,7 +29,7 @@ namespace tuya_mqtt.net
             builder.Services.AddSingleton<MqttClientService>();
             builder.Services.AddSingleton<MqttSubscriptionService>();
             builder.Services.AddSingleton<LogNotificationService>();
-            builder.Services.AddSingleton<BrowserService>();
+            builder.Services.AddTransient<BrowserService>();
 
             builder.Services.Configure<TuyaCommunicatorOptions>(
                 builder.Configuration.GetSection("Tuya"));
@@ -87,21 +82,6 @@ namespace tuya_mqtt.net
             app.MapFallbackToPage("/_Host");
 
             app.Run();
-        }
-
-        private static byte[] ComputeHash(string file)
-        {
-            if (File.Exists(file))
-            {
-                using (var fs = File.OpenRead(file))
-                {
-                    return System.Security.Cryptography.SHA1.Create().ComputeHash(fs);
-                }
-            }
-            else
-            {
-                return new byte[20];
-            }
         }
 
         private static void CreateDirectoryIfNeeded(IFileProvider fileProvider, string file)

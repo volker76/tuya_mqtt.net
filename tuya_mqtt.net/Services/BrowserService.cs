@@ -33,6 +33,9 @@ namespace tuya_mqtt.net.Services
         {
             _logger = logger;
         }
+
+        public bool IsInitialized => _jsModule != null;
+
         public async Task InitAsync(IJSRuntime js)
         {
             await _initLocker.WaitAsync().ConfigureAwait(false);
@@ -89,6 +92,7 @@ namespace tuya_mqtt.net.Services
             {
                 if (_jsModule == null)
                 {
+                    _logger.LogError("GetViewPortSize - no JSModule");
                     throw new InvalidOperationException("BrowserService is not initialized. run Init() before.");
                 }
 
@@ -98,6 +102,10 @@ namespace tuya_mqtt.net.Services
                         $"javascript viewportSize did not return two elements {ret}");
                 _browserWidth = ret[0];
                 _browserHeight = ret[1];
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error Getting ViewPortSize");
             }
             // ReSharper disable once RedundantEmptyFinallyBlock
             finally
@@ -110,10 +118,17 @@ namespace tuya_mqtt.net.Services
         [JSInvokable]
         public void SetBrowserDimensions(int jsBrowserWidth, int jsBrowserHeight)
         {
-            _browserWidth = jsBrowserWidth;
-            _browserHeight = jsBrowserHeight;
-            _logger.LogDebug($"BrowserService window new size ({_browserWidth},{_browserHeight})");
-            this.Resize?.Invoke(this, new WindowSize(){Width=_browserWidth,Height=_browserHeight});
+            try
+            {
+                _browserWidth = jsBrowserWidth;
+                _browserHeight = jsBrowserHeight;
+                _logger.LogDebug($"BrowserService window new size ({_browserWidth},{_browserHeight})");
+                this.Resize?.Invoke(this, new WindowSize() { Width = _browserWidth, Height = _browserHeight });
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error set browser dimensions");
+            }
         }
 
         public int BrowserWidth
@@ -122,6 +137,7 @@ namespace tuya_mqtt.net.Services
             {
                 if (_browserWidth == 0)
                 {
+                    _logger.LogError( "browserWidth == 0");
                     throw new InvalidOperationException("InitAsync seems not called or not finished yet.");
                 }
                 return _browserWidth;
@@ -134,6 +150,7 @@ namespace tuya_mqtt.net.Services
             {
                 if (_browserHeight == 0)
                 {
+                    _logger.LogError("browserHeight == 0");
                     throw new InvalidOperationException("InitAsync seems not called or not finished yet.");
                 }
                 return _browserHeight;
@@ -155,6 +172,7 @@ namespace tuya_mqtt.net.Services
         {
             if (_jsModule == null)
             {
+                _logger.LogError("ScrollToEnd - no JSModule");
                 throw new InvalidOperationException("BrowserService is not initialized. run Init() before.");
             }
             
@@ -166,6 +184,7 @@ namespace tuya_mqtt.net.Services
         {
             if (_jsModule == null)
             {
+                _logger.LogError("ScrollClassIntoView - no JSModule");
                 throw new InvalidOperationException("BrowserService is not initialized. run Init() before.");
             }
 
