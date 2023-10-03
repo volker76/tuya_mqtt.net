@@ -3,9 +3,9 @@ using Microsoft.Extensions.Options;
 using tuya_mqtt.net.Data;
 using com.clusterrr.TuyaNet;
 using System.Security.Cryptography;
+using JetBrains.Annotations;
 using MudBlazor;
-using System.Threading.Tasks;
-using System.Threading;
+using Newtonsoft.Json.Linq;
 
 namespace tuya_mqtt.net.Services
 {
@@ -15,17 +15,24 @@ namespace tuya_mqtt.net.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly TuyaScanner? _networkScanner;
         private readonly TimedDictionary<string, TuyaDeviceScanInfo> _tuyaScanDevices;
+
+        private readonly TimedDictionary<Tuple<string, int>, string> _tuyaPropertyCache;
+
         private readonly Timer _startupDelay;
+
+        // ReSharper disable once InconsistentNaming
         private readonly TimeSpan TuyaDeviceExpired = TimeSpan.FromSeconds(30); //30 second constant
         private const int TuyaTimeout = 2000; //2000ms timeout
+        // ReSharper disable once InconsistentNaming
+        private readonly TimeSpan TuyaPropertyCacheExpiration = TimeSpan.FromHours(4);
 
         public event EventHandler<TuyaDeviceScanInfo>? OnTuyaScannerUpdate;
 
-        private readonly IOptionsMonitor<TuyaCommunicatorOptions> _options;
-        private TuyaCommunicatorOptions Options => _options.CurrentValue;
+        private readonly IOptionsMonitor<TuyaCommunicatorOptions> _tuyaoptions;
+        private TuyaCommunicatorOptions Options => _tuyaoptions.CurrentValue;
 
         private readonly IOptionsMonitor<GlobalOptions> _globaloptions;
-        private GlobalOptions GlobalOptions => _globaloptions.CurrentValue;
+        [UsedImplicitly] private GlobalOptions GlobalOptions => _globaloptions.CurrentValue;
 
         private TuyaConnectedDeviceService? ConnectedDevices
         {
@@ -40,16 +47,41 @@ namespace tuya_mqtt.net.Services
             }
         }
 
+        public IEnumerable<TuyaApi.Region> Regions
+        {
+            get
+            {
+                List< TuyaApi.Region > regions = new List<TuyaApi.Region>();
+                foreach (TuyaApi.Region r in Enum.GetValues(typeof(TuyaApi.Region)))
+                {
+                    regions.Add(r);
+                }
+
+                return regions;
+            }
+        }
+
+        public bool TuyaApiConfigured
+        {
+            get
+            {
+                // ReSharper disable once ArrangeRedundantParentheses
+                return (!string.IsNullOrEmpty(Options.TuyaAPIAccessID) && !string.IsNullOrEmpty(Options.TuyaAPISecret));
+            }
+        }
+
         public TuyaCommunicatorService(IServiceProvider sp, ILogger<TuyaCommunicatorService> logger, IOptionsMonitor<TuyaCommunicatorOptions> options, IOptionsMonitor<GlobalOptions> globalOptions)
         {
             _logger = logger;
             _serviceProvider = sp;
-            _options = options;
+            _tuyaoptions = options;
             _globaloptions = globalOptions;
 
             _tuyaScanDevices = new TimedDictionary<string, TuyaDeviceScanInfo>(TuyaDeviceExpired);
             _tuyaScanDevices.OnListUpdated += ScanDevicesListUpdated;
-            
+
+            _tuyaPropertyCache = new TimedDictionary<Tuple<string, int>, string>(TuyaPropertyCacheExpiration);
+
             _networkScanner = new TuyaScanner();
             _networkScanner.OnDeviceInfoReceived += Scanner_OnDeviceInfoReceived;
             _networkScanner.Start();
@@ -125,28 +157,69 @@ namespace tuya_mqtt.net.Services
 
         public async Task<List<DP>> TestConnect(TuyaDeviceInformation device)
         {
+            if (device.CommunicationType == TuyaDeviceInformation.DeviceType.Cloud)
+                return await TestConnectCloud(device);
+            else
+                return await TestConnectLocal(device);
             
+        }
+        private async Task<List<DP>> TestConnectCloud(TuyaDeviceInformation device)
+        {
+            _logger.LogDebug($"TestConnect to cloud for ID:{device.ID}");
+            if (string.IsNullOrEmpty(device.ID))
+                throw new ArgumentOutOfRangeException(nameof(device.ID), "ID cannot be empty");
+            if (!TuyaApiConfigured)
+                throw new InvalidOperationException("No cloud credentials configured");
+            try
+            {
+                var api = new TuyaApi(region: Options.TuyaAPIRegion, accessId: Options.TuyaAPIAccessID, apiSecret: Options.TuyaAPISecret);
+
+                Task<string> t = api.RequestAsync(TuyaApi.Method.GET,
+                    $"v2.0/cloud/thing/{device.ID}/shadow/properties");
+
+                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // timeout 
+                {
+                    var json = t.Result;
+                    var list = DP.ParseCloudJSON(json);
+
+                    return list;
+                }
+                else
+                {
+                    throw new TimeoutException($"device: {device.Address} ID:{device.ID} did not respond in time");
+                }
+
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"error testing device {device.ID}");
+                throw new Exception($"error testing device {device.ID}", e);
+            }
+
+        }
+        private async Task<List<DP>> TestConnectLocal(TuyaDeviceInformation device)
+        {
             _logger.LogDebug($"TestConnect to {device.Address} ID:{device.ID} Key:{device.Key}");
             if (string.IsNullOrEmpty(device.ID))
-                throw new ArgumentOutOfRangeException(nameof(device.ID),"ID cannot be empty");
+                throw new ArgumentOutOfRangeException(nameof(device.ID), "ID cannot be empty");
             if (string.IsNullOrEmpty(device.Key))
                 throw new ArgumentOutOfRangeException(nameof(device.Key), "Key cannot be empty");
             try
             {
                 var dev = new TuyaDevice(device.Address, device.Key.Trim(), device.ID.Trim(), device.ProtocolVersion);
-                var json_in=dev.FillJson("");
-                byte[] request = dev.EncodeRequest(TuyaCommand.DP_QUERY, json_in);
+                var jsonIn = dev.FillJson("");
+                byte[] request = dev.EncodeRequest(TuyaCommand.DP_QUERY, jsonIn);
 
 
                 var t = dev.SendAsync(request);
 
-                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // timeout 
+                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // no timeout 
                 {
                     byte[] encryptedResponse = t.Result;
                     TuyaLocalResponse response = dev.DecodeResponse(encryptedResponse);
                     string json = response.JSON;
                     _logger.LogDebug($"TestConnect to {device.Address} returned data set {json}");
-                    var list = DP.ParseJSON(json);
+                    var list = DP.ParseLocalJSON(json);
 
                     return list;
                 }
@@ -166,7 +239,54 @@ namespace tuya_mqtt.net.Services
         }
 
         // ReSharper disable once InconsistentNaming
-        public async Task<List<DP>> GetDPAsync(TuyaExtendedDeviceInformation device)
+        public async Task<List<DP>> GetDPAsync(TuyaDeviceInformation device)
+        {
+            if (device.CommunicationType == TuyaDeviceInformation.DeviceType.Cloud)
+                return await GetDPCloudAsync(device);
+            else
+                return await GetDPLocalAsync(device);
+            
+        }
+
+        // ReSharper disable once InconsistentNaming
+        private async Task<List<DP>> GetDPCloudAsync(TuyaDeviceInformation device)
+        {
+            _logger.LogDebug($"Poll cloud data from ID:{device.ID}");
+            if (string.IsNullOrEmpty(device.ID))
+                throw new ArgumentOutOfRangeException(nameof(device.ID), "ID cannot be empty");
+            if (!TuyaApiConfigured)
+                throw new InvalidOperationException("No cloud credentials configured");
+
+            try
+            {
+                var api = new TuyaApi(region: Options.TuyaAPIRegion, accessId: Options.TuyaAPIAccessID, apiSecret: Options.TuyaAPISecret);
+
+                Task<string> t = api.RequestAsync(TuyaApi.Method.GET,
+                    $"v2.0/cloud/thing/{device.ID}/shadow/properties");
+
+                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // no timeout 
+                {
+                    var json = t.Result;
+                    var list = DP.ParseCloudJSON(json);
+
+                    return list;
+                }
+                else
+                {
+                    throw new TimeoutException($"device: ID:{device.ID} did not respond in time");
+                }
+
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"error retrieving device data ID={device.ID}");
+                throw new Exception($"error retrieving device data ID={device.ID}", e);
+            }
+
+        }
+
+        // ReSharper disable once InconsistentNaming
+        private async Task<List<DP>> GetDPLocalAsync(TuyaDeviceInformation device)
         {
             _logger.LogDebug($"Poll data from {device.Address} ID:{device.ID} Key:{device.Key}");
             if (string.IsNullOrEmpty(device.ID))
@@ -181,13 +301,13 @@ namespace tuya_mqtt.net.Services
 
                 var t = dev.SendAsync(request);
                 
-                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // timeout 
+                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // no timeout 
                 {
                     byte[] encryptedResponse = t.Result;
                     TuyaLocalResponse response = dev.DecodeResponse(encryptedResponse);
                     string json = response.JSON;
                     _logger.LogInformation($"Get DPs from {device.Address}'{device.ID}' returned data set {json}");
-                    var list = DP.ParseJSON(json);
+                    var list = DP.ParseLocalJSON(json);
 
                     return list;
                 }
@@ -202,15 +322,115 @@ namespace tuya_mqtt.net.Services
             }
             catch (TimeoutException e)
             {
-                throw new TimeoutException($"Timeout when reading device {device.Name} {e.Message}", e);
+                throw new TimeoutException($"Timeout when reading device {device.ID} {e.Message}", e);
             }
             catch (Exception e)
             {
                 throw new Exception(e.Message);
             }
         }
+        // ReSharper disable once InconsistentNaming
+        public async Task<List<DP>> SetDPAsync(TuyaDeviceInformation device, int dpNumber, string value)
+        {
+            if (device.CommunicationType == TuyaDeviceInformation.DeviceType.Cloud)
+            {
+                await SetDPCloudAsync(device, dpNumber, value);
+                await Task.Delay(100); 
+                return await GetDPCloudAsync(device);
+            }
+            else
+            {
+                return await SetDPLocalAsync(device, dpNumber, value);
+            }
+        }
+        // ReSharper disable once InconsistentNaming
+        private async Task SetDPCloudAsync(TuyaDeviceInformation device, int dpNumber, string value)
+        {
+            _logger.LogDebug($"Set data to {device.Address} ID:{device.ID} Key:{device.Key}");
+            if (string.IsNullOrEmpty(device.ID))
+                throw new ArgumentOutOfRangeException(nameof(device.ID), "ID cannot be empty");
+            if (!TuyaApiConfigured)
+                throw new InvalidOperationException("No cloud credentials configured");
 
-        internal async Task<List<DP>> SetDPAsync(TuyaExtendedDeviceInformation device, int dpNumber, string value)
+            try
+            {
+                var api = new TuyaApi(region: Options.TuyaAPIRegion, accessId: Options.TuyaAPIAccessID, apiSecret: Options.TuyaAPISecret);
+                value = CorrectBool(value); // bool values True / False must be lower letters for JSON
+
+                bool success = GetApiDeviceProperty(device.ID,dpNumber,out string prop);
+                if (!success)
+                {
+                    prop = await RequestDevicePropertyAsync(api, device.ID, dpNumber);
+                    SetApiDeviceProperty(device.ID, dpNumber, prop);
+                }
+
+                string body = $"{{ \"properties\": {{\"{prop}\":{value}}} }}";
+                Task<string> t = api.RequestAsync(TuyaApi.Method.POST,
+                    $"v2.0/cloud/thing/{device.ID}/shadow/properties/issue", body);
+
+                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // no timeout 
+                {
+                    return;
+                }
+                else
+                {
+                    throw new TimeoutException($"device: ID:{device.ID} did not respond in time");
+                }
+
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"error setting cloud ID={device.ID}:{dpNumber} to '{value}'");
+                throw new Exception($"error setting cloud ID={device.ID}:{dpNumber} to '{value}'", e);
+            }
+
+        }
+
+        private async Task<string> RequestDevicePropertyAsync(TuyaApi api, string deviceId, int dpNumber)
+        {
+            if (string.IsNullOrEmpty(deviceId))
+                throw new ArgumentOutOfRangeException(nameof(deviceId), "ID cannot be empty");
+            if (!TuyaApiConfigured)
+                throw new InvalidOperationException("No cloud credentials configured");
+
+            Task<string> t = api.RequestAsync(TuyaApi.Method.GET,
+                $"v2.0/cloud/thing/{deviceId}/shadow/properties");
+
+            if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // timeout 
+            {
+                var json = t.Result;
+                var prop = DP.FindPropertyByDP(json,dpNumber);
+
+                return prop;
+            }
+            else
+            {
+                throw new TimeoutException($"device: ID:{deviceId} did not respond in time");
+            }
+        }
+
+        private void SetApiDeviceProperty(string id, int dpNumber, string prop)
+        {
+            _tuyaPropertyCache.Set(new Tuple<string, int>(id, dpNumber),prop);
+        }
+
+        private bool GetApiDeviceProperty(string id, int dpNumber, out string prop)
+        {
+            prop = "";
+            try
+            {
+                prop = _tuyaPropertyCache[new Tuple<string, int>(id, dpNumber)]!;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+
+        }
+
+        // ReSharper disable once InconsistentNaming
+        private async Task<List<DP>> SetDPLocalAsync(TuyaDeviceInformation device, int dpNumber, string value)
         {
             _logger.LogDebug($"Set data to {device.Address} ID:{device.ID} Key:{device.Key}");
             if (string.IsNullOrEmpty(device.ID))
@@ -233,7 +453,7 @@ namespace tuya_mqtt.net.Services
                     TuyaLocalResponse response = dev.DecodeResponse(encryptedResponse);
                     string json = response.JSON;
                     _logger.LogInformation($"Get DPs from {device.Address}'{device.ID}' returned data set {json}");
-                    var list = DP.ParseJSON(json);
+                    var list = DP.ParseLocalJSON(json);
 
                     return list;
                 }
@@ -248,7 +468,7 @@ namespace tuya_mqtt.net.Services
             }
             catch (TimeoutException e)
             {
-                throw new TimeoutException($"Timeout when setting {device.Name}:{dpNumber} to '{value}' {e.Message}",e);
+                throw new TimeoutException($"Timeout when setting {device.ID}:{dpNumber} to '{value}' {e.Message}",e);
             }
             catch (Exception e)
             {
@@ -265,6 +485,72 @@ namespace tuya_mqtt.net.Services
                 value = "false";
 
             return value;
+        }
+
+        // ReSharper disable once InconsistentNaming
+        public async Task TestCloudAPIAsync(string apiKey, string apiSecret, TuyaApi.Region region)
+        {
+            try
+            { 
+                var api = new TuyaApi(region: region, accessId: apiKey, apiSecret: apiSecret);
+                
+                //check if we can use it to make a request
+                var json = await api.RequestAsync(TuyaApi.Method.GET,
+                    $"/v2.0/cloud/space/child?only_sub=false");
+                JObject jObject = JObject.Parse(json);
+                var data = jObject["data"]; //there shall be a list named "data"
+                if (data != null)
+                {
+                    if (!data.Any() )
+                        throw new Exception("API credentials correct, but possibly wrong region.");
+                }
+                else
+                    throw new Exception("API call did not return expected result.");
+
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "error testing TUYA API");
+                throw new Exception("error testing TUYA API",e);
+            }
+        }
+
+        public async Task<Tuple<bool, string, string>> GetDeviceDataFromApiAsync(string id)
+        {
+            string localKey=String.Empty;
+            string deviceName=String.Empty;
+            if (!TuyaApiConfigured)
+            {
+                _logger.LogInformation($"No Tuya API credentials configured to find information for ID:{id}.");
+                return new Tuple<bool, string, string>(false, localKey, deviceName);
+            }
+
+            try
+            {
+                var api = new TuyaApi(region: Options.TuyaAPIRegion, accessId: Options.TuyaAPIAccessID, apiSecret: Options.TuyaAPISecret);
+
+                var json = await api.RequestAsync(TuyaApi.Method.GET,
+                    $"/v2.0/cloud/thing/{id}");
+                JObject jObject = JObject.Parse(json);
+                var localKeyToken = jObject["local_key"];
+                if (localKeyToken != null)
+                {
+                    localKey = localKeyToken.Value<string>() ?? string.Empty;
+                }
+                var nameToken = jObject["custom_name"];
+                if (nameToken != null)
+                {
+                    deviceName = nameToken.Value<string>() ?? string.Empty;
+                }
+                return new Tuple<bool, string, string>(true, localKey, deviceName);
+                
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"Error requesting TuyaAPI for ID:{id}.");
+                //don't throw any exception as the missing data can be entered manually also.
+                return new Tuple<bool, string, string>(false, localKey, deviceName);
+            }
         }
     }
 }

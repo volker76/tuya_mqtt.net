@@ -241,7 +241,22 @@ namespace tuya_mqtt.net.Services
 
         public void RemoveDevice(TuyaDeviceInformation device)
         {
-            SaveOptions();
+            RemoveDevice(device.ID);
+        }
+
+        public void RemoveDevice(string deviceId)
+        {
+            if (_monitoredDevices.TryRemove(deviceId, out var dev))
+            {
+                _logger.LogInformation($"device ID:{dev.ID} name:{dev.Name} removed from monitor list");
+                SaveOptions();
+                return;
+            }
+            else
+            {
+                _logger.LogError($"device ID:{deviceId} could not be removed from monitor list");
+                throw new InvalidOperationException("device ID:{deviceId} could not be removed from monitor list");
+            }
         }
 
         public void UpdateIp(TuyaDeviceScanInfo scannedDevice)

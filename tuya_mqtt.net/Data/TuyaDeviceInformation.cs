@@ -5,12 +5,19 @@ namespace tuya_mqtt.net.Data
 {
     public class TuyaDeviceInformation
     {
+        public enum DeviceType
+        {
+            LocalTuya = 1,
+            Cloud =10,
+
+        }
         public TuyaDeviceInformation(TuyaDeviceInformation device)
         {
             this.ID = device.ID;
             this.Address = device.Address;
             this.Key = device.Key;  
             this.ProtocolVersion = device.ProtocolVersion;
+            this.CommunicationType = device.CommunicationType;
         }
 
         public TuyaDeviceInformation()
@@ -22,6 +29,7 @@ namespace tuya_mqtt.net.Data
         public string Key { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
         public TuyaProtocolVersion ProtocolVersion { get; set; } = TuyaProtocolVersion.V33;
+        public DeviceType CommunicationType { get; set; } = DeviceType.LocalTuya;
 
     }
 

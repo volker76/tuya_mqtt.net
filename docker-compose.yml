@@ -37,6 +37,10 @@ services:
       - 8889:80/tcp #connect to 8889 to get to the web UI
 #   network_mode: host
     restart: on-failure
+    healthcheck:
+      test: curl --fail http://localhost:80 || exit 1
+      interval: 60s
+      retries: 5
     networks:
         - mqtt
 
