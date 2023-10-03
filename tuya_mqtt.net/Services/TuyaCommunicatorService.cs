@@ -163,7 +163,7 @@ namespace tuya_mqtt.net.Services
                 return await TestConnectLocal(device);
             
         }
-        public async Task<List<DP>> TestConnectCloud(TuyaDeviceInformation device)
+        private async Task<List<DP>> TestConnectCloud(TuyaDeviceInformation device)
         {
             _logger.LogDebug($"TestConnect to cloud for ID:{device.ID}");
             if (string.IsNullOrEmpty(device.ID))
@@ -197,7 +197,7 @@ namespace tuya_mqtt.net.Services
             }
 
         }
-        public async Task<List<DP>> TestConnectLocal(TuyaDeviceInformation device)
+        private async Task<List<DP>> TestConnectLocal(TuyaDeviceInformation device)
         {
             _logger.LogDebug($"TestConnect to {device.Address} ID:{device.ID} Key:{device.Key}");
             if (string.IsNullOrEmpty(device.ID))
@@ -239,7 +239,7 @@ namespace tuya_mqtt.net.Services
         }
 
         // ReSharper disable once InconsistentNaming
-        public async Task<List<DP>> GetDPAsync(TuyaExtendedDeviceInformation device)
+        public async Task<List<DP>> GetDPAsync(TuyaDeviceInformation device)
         {
             if (device.CommunicationType == TuyaDeviceInformation.DeviceType.Cloud)
                 return await GetDPCloudAsync(device);
@@ -249,7 +249,7 @@ namespace tuya_mqtt.net.Services
         }
 
         // ReSharper disable once InconsistentNaming
-        public async Task<List<DP>> GetDPCloudAsync(TuyaExtendedDeviceInformation device)
+        private async Task<List<DP>> GetDPCloudAsync(TuyaDeviceInformation device)
         {
             _logger.LogDebug($"Poll cloud data from ID:{device.ID}");
             if (string.IsNullOrEmpty(device.ID))
@@ -286,7 +286,7 @@ namespace tuya_mqtt.net.Services
         }
 
         // ReSharper disable once InconsistentNaming
-        public async Task<List<DP>> GetDPLocalAsync(TuyaExtendedDeviceInformation device)
+        private async Task<List<DP>> GetDPLocalAsync(TuyaDeviceInformation device)
         {
             _logger.LogDebug($"Poll data from {device.Address} ID:{device.ID} Key:{device.Key}");
             if (string.IsNullOrEmpty(device.ID))
@@ -322,7 +322,7 @@ namespace tuya_mqtt.net.Services
             }
             catch (TimeoutException e)
             {
-                throw new TimeoutException($"Timeout when reading device {device.Name} {e.Message}", e);
+                throw new TimeoutException($"Timeout when reading device {device.ID} {e.Message}", e);
             }
             catch (Exception e)
             {
@@ -330,11 +330,13 @@ namespace tuya_mqtt.net.Services
             }
         }
         // ReSharper disable once InconsistentNaming
-        public async Task<List<DP>> SetDPAsync(TuyaExtendedDeviceInformation device, int dpNumber, string value)
+        public async Task<List<DP>> SetDPAsync(TuyaDeviceInformation device, int dpNumber, string value)
         {
             if (device.CommunicationType == TuyaDeviceInformation.DeviceType.Cloud)
             {
-                return await SetDPCloudAsync(device, dpNumber, value);
+                await SetDPCloudAsync(device, dpNumber, value);
+                await Task.Delay(100); 
+                return await GetDPCloudAsync(device);
             }
             else
             {
@@ -342,7 +344,7 @@ namespace tuya_mqtt.net.Services
             }
         }
         // ReSharper disable once InconsistentNaming
-        public async Task<List<DP>> SetDPCloudAsync(TuyaExtendedDeviceInformation device, int dpNumber, string value)
+        private async Task SetDPCloudAsync(TuyaDeviceInformation device, int dpNumber, string value)
         {
             _logger.LogDebug($"Set data to {device.Address} ID:{device.ID} Key:{device.Key}");
             if (string.IsNullOrEmpty(device.ID))
@@ -362,16 +364,13 @@ namespace tuya_mqtt.net.Services
                     SetApiDeviceProperty(device.ID, dpNumber, prop);
                 }
 
-                string body = $"{{ properties: {{\"{prop}\":{value}}} }}";
+                string body = $"{{ \"properties\": {{\"{prop}\":{value}}} }}";
                 Task<string> t = api.RequestAsync(TuyaApi.Method.POST,
                     $"v2.0/cloud/thing/{device.ID}/shadow/properties/issue", body);
 
-                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // timeout 
+                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // no timeout 
                 {
-                    var json = t.Result;
-                    
-
-                    return new List<DP>() ;
+                    return;
                 }
                 else
                 {
@@ -431,7 +430,7 @@ namespace tuya_mqtt.net.Services
         }
 
         // ReSharper disable once InconsistentNaming
-        public async Task<List<DP>> SetDPLocalAsync(TuyaExtendedDeviceInformation device, int dpNumber, string value)
+        private async Task<List<DP>> SetDPLocalAsync(TuyaDeviceInformation device, int dpNumber, string value)
         {
             _logger.LogDebug($"Set data to {device.Address} ID:{device.ID} Key:{device.Key}");
             if (string.IsNullOrEmpty(device.ID))
@@ -469,7 +468,7 @@ namespace tuya_mqtt.net.Services
             }
             catch (TimeoutException e)
             {
-                throw new TimeoutException($"Timeout when setting {device.Name}:{dpNumber} to '{value}' {e.Message}",e);
+                throw new TimeoutException($"Timeout when setting {device.ID}:{dpNumber} to '{value}' {e.Message}",e);
             }
             catch (Exception e)
             {
