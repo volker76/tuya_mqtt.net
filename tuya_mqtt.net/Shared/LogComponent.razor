@@ -72,6 +72,7 @@
             _logitems.Add(item);
             this.StateHasChanged();
         }
+
     }
 
 
@@ -140,9 +141,8 @@
     {
         if (ScrollBottom)
         {
-#pragma warning disable CS1030
+
 #warning this is ugly as we don't know if there may be multiple scollable elements on the page'
-#pragma warning restore CS1030
             return _browser!.ScrollClassIntoView("tfoot.mud-table-foot", 0);
         }
        

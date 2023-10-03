@@ -27,6 +27,22 @@
             <MudText Align="Align.Left">@Devices.GetMonitoredDevices().Count</MudText>
         </td>
     </tr>
+    <tr>
+        <td class="list1">
+            <MudText Align="Align.Left">cloud API:</MudText>
+        </td>
+        <td class="list2">
+            @if (Service.TuyaApiConfigured)
+            {
+                <MudText Align="Align.Left" Style="@($"color:{Colors.Green.Default};")">configured</MudText>
+            }
+            else
+            {
+                <MudText Align="Align.Left" Style="@($"")">not configured</MudText>
+            }
+
+        </td>
+    </tr>
     
 </table>
 
@@ -36,7 +52,4 @@
     {
         
     }
-
-   
-
 }

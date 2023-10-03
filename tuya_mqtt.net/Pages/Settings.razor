@@ -1,27 +1,46 @@
 ﻿@page "/settings"
 @using Awesome.Net.WritableOptions;
+@using com.clusterrr.TuyaNet
 @using tuya_mqtt.net.Services
 @using MqttClientOptions = tuya_mqtt.net.Data.MqttClientOptions
+@using TuyaCommunicatorOptions = tuya_mqtt.net.Data.TuyaCommunicatorOptions
 @inject ILogger<Settings> Logger
-@inject IWritableOptions<MqttClientOptions> data
-@inject MqttClientService client;
+@inject IWritableOptions<MqttClientOptions> Mqttdata
+@inject IWritableOptions<TuyaCommunicatorOptions> Tuyadata
+@inject MqttClientService Client;
+@inject TuyaCommunicatorService TuyaService;
 @inject ISnackbar Snackbar
 
 <PageTitle>Settings</PageTitle>
 
 <h1>Settings</h1>
-
+@* ReSharper disable UnknownCssClass *@
 <MudCard>
     <MudCardHeader>
         <CardHeaderContent>
             <MudText Typo="Typo.h6">Tuya</MudText>
+            <MudText Style="@($"color:{Colors.Grey.Default};")" Typo="Typo.subtitle2">optional API settings to connect to TUYA cloud.</MudText>
         </CardHeaderContent>
         <CardHeaderActions>
             <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Default" />
         </CardHeaderActions>
     </MudCardHeader>
     <MudCardContent>
-        <MudText> </MudText>
+        <MudPaper Elevation="0">
+            @* ReSharper disable once UnknownCssClass *@
+            <MudStack Row="true" Class="align-center">
+                <MudTextField @bind-Value="_accessId" Label="AccessID" HelperText="API ID" Variant="Variant.Text"></MudTextField>
+                <MudButton Variant="Variant.Filled" Style="height:40px" Color="Color.Primary" OnClick=@TestTuyaApi>Try Connect</MudButton>
+            </MudStack>
+            <MudTextField @bind-Value="_accessSecret" Label="API Secret" HelperText="Tuya API Secret" Variant="Variant.Text" InputType="@_passwordApiInput"
+                              Adornment="Adornment.End" AdornmentIcon="@_passwordApiInputIcon" OnAdornmentClick="ButtonTuyaApiPasswordToggle" AdornmentAriaLabel="Show Password"></MudTextField>
+            <MudSelect @bind-Value="TuyaApiRegion">
+                @foreach (var r in TuyaService.Regions)
+                {
+                    <MudSelectItem Value="@r">@r</MudSelectItem>
+                }
+            </MudSelect>
+        </MudPaper>
     </MudCardContent>
 </MudCard>
 
@@ -38,7 +57,7 @@
         <MudPaper Elevation="0">
             <MudStack Row="true" Class="align-center" >
                 <MudTextField @bind-Value="_mqttHost" Label="Adress/IP" HelperText="Broker Adress" Variant="Variant.Text"></MudTextField>
-                <MudButton Variant="Variant.Filled" Style="height:40px" Color="Color.Primary" OnClick=@TestConnection>Test Connection</MudButton>
+                <MudButton Variant="Variant.Filled" Style="height:40px" Color="Color.Primary" OnClick=@TestDeviceConnection>Test Connection</MudButton>
             </MudStack>
             <MudStack Row="true" Class="align-center">
                 <MudTextField @bind-Value="_mqttPort" Label="Port" HelperText="Broker Port" Variant="Variant.Text" Format="D"></MudTextField>
@@ -47,11 +66,11 @@
                 </MudTooltip>
             </MudStack>
         </MudPaper>
-        <MudPaper class="mt-6  mb-4" Elevation="0">
+        <MudPaper class="mt-6 mb-4" Elevation="0">
             <MudSwitch @bind-Checked="MqttAuthentication" Label="Use Authentication" Color="Color.Primary" />
             <MudTextField @bind-Value="_mqttUsername" Disabled=@NotMqttAuthentication Label="Username" HelperText="MQTT broker login" Variant="Variant.Text"></MudTextField>
-            <MudTextField @bind-Value="_mqttPassword" Disabled=@NotMqttAuthentication Label="Password" HelperText="MQTT broker password" Variant="Variant.Text" InputType="@_passwordInput"
-                          Adornment="Adornment.End" AdornmentIcon="@_passwordInputIcon" OnAdornmentClick="ButtonPasswordToggle" AdornmentAriaLabel="Show Password"></MudTextField>
+            <MudTextField @bind-Value="_mqttPassword" Disabled=@NotMqttAuthentication Label="Password" HelperText="MQTT broker password" Variant="Variant.Text" InputType="@_passwordMqttInput"
+                          Adornment="Adornment.End" AdornmentIcon="@_passwordMqttInputIcon" OnAdornmentClick="ButtonMqttPasswordToggle" AdornmentAriaLabel="Show Password"></MudTextField>
         </MudPaper>
         <MudDivider />
         <MudPaper Class="mt-4" Elevation="0">
@@ -62,72 +81,124 @@
                 <MudSwitch @bind-Checked="_mqttNoFragmentation" Label="Packet fagmentation" Color="Color.Primary"/>
             </MudTooltip>
             <MudTextField @bind-Value="_mqttTopic" Label="Topic" HelperText="MQTT Main Topic" Variant="Variant.Text"></MudTextField>
-     
         </MudPaper>
-        <MudPaper Elevation="0" Class="d-flex justify-end pt-5 ar-2">
-            <MudFab Color="Color.Primary"  StartIcon="@Icons.Material.Filled.Save" OnClick="SaveMqtt" />
-        </MudPaper>
+        
     </MudCardContent>
 </MudCard>
-<MudOverlay Visible=@isInWait DarkBackground="true" >
+
+<MudPaper Elevation="0" Class="d-flex justify-end mt-5 ar-2">
+    <MudFab Color="Color.Primary"  StartIcon="@Icons.Material.Filled.Save" OnClick="SaveData" />
+</MudPaper>
+
+<MudOverlay Visible=@_isInWait DarkBackground="true" >
     <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
 </MudOverlay>
-
+@* ReSharper restore UnknownCssClass *@
 @code {
-    private bool isInWait = false;  //true if overlay shall be on and spinner rotating
+    private bool _isInWait;  //true if overlay shall be on and spinner rotating
     private string _mqttHost = string.Empty;
     private string _mqttPort = string.Empty;
     private string _mqttTopic = string.Empty;
-    private bool _mqttAuthentication = false;
+    private bool _mqttAuthentication;
     private bool MqttAuthentication
     {
         get => _mqttAuthentication;
         set => _mqttAuthentication = value;
     }
     private bool NotMqttAuthentication => !_mqttAuthentication;
-    private bool _mqttV5 = false;
-    private bool _mqttTls = false;
-    private bool _mqttNoFragmentation = false;
+    private bool _mqttV5;
+    private bool _mqttTls;
+    private bool _mqttNoFragmentation;
 
     private string _mqttUsername = string.Empty;
     private string _mqttPassword = string.Empty;
 
-    InputType _passwordInput = InputType.Password;
-    string _passwordInputIcon = Icons.Material.Filled.VisibilityOff;
-    bool _isShow = false;
+    private string _accessId = string.Empty;
+    private string _accessSecret = string.Empty;
 
-    void ButtonPasswordToggle() //toggle button at password text box
+    private TuyaApi.Region TuyaApiRegion { get; set; } = TuyaApi.Region.WesternEurope;
+
+    InputType _passwordMqttInput = InputType.Password;
+    string _passwordMqttInputIcon = Icons.Material.Filled.VisibilityOff;
+    InputType _passwordApiInput = InputType.Password;
+    string _passwordApiInputIcon = Icons.Material.Filled.VisibilityOff;
+    bool _isShow;
+
+    void ButtonMqttPasswordToggle() //toggle button at password text box
     {
         @if (_isShow)
         {
             _isShow = false;
-            _passwordInputIcon = Icons.Material.Filled.VisibilityOff;
-            _passwordInput = InputType.Password;
+            _passwordMqttInputIcon = Icons.Material.Filled.VisibilityOff;
+            _passwordMqttInput = InputType.Password;
         }
         else
         {
             _isShow = true;
-            _passwordInputIcon = Icons.Material.Filled.Visibility;
-            _passwordInput = InputType.Text;
+            _passwordMqttInputIcon = Icons.Material.Filled.Visibility;
+            _passwordMqttInput = InputType.Text;
+        }
+    }
+
+    void ButtonTuyaApiPasswordToggle() //toggle button at password text box
+    {
+        @if (_isShow)
+        {
+            _isShow = false;
+            _passwordApiInputIcon = Icons.Material.Filled.VisibilityOff;
+            _passwordApiInput = InputType.Password;
+        }
+        else
+        {
+            _isShow = true;
+            _passwordApiInputIcon = Icons.Material.Filled.Visibility;
+            _passwordApiInput = InputType.Text;
         }
     }
 
     protected override void OnInitialized()
     {
         /* get values from global settings*/
-        _mqttHost = data.Value.MqttHost;
-        _mqttPort = data.Value.MqttPort > 0 ? data.Value.MqttPort.ToString() : String.Empty;
-        _mqttUsername = data.Value.MqttUser;
-        _mqttPassword = data.Value.MqttPassword;
-        MqttAuthentication = data.Value.MqttAuthentication;
-        _mqttV5 = data.Value.MqttV5;
-        _mqttTls = data.Value.MqttTls;
-        _mqttNoFragmentation = data.Value.MqttNoFragmentation;
-        _mqttTopic = data.Value.MqttTopic;
+        _mqttHost = Mqttdata.Value.MqttHost;
+        _mqttPort = Mqttdata.Value.MqttPort > 0 ? Mqttdata.Value.MqttPort.ToString() : String.Empty;
+        _mqttUsername = Mqttdata.Value.MqttUser;
+        _mqttPassword = Mqttdata.Value.MqttPassword;
+        MqttAuthentication = Mqttdata.Value.MqttAuthentication;
+        _mqttV5 = Mqttdata.Value.MqttV5;
+        _mqttTls = Mqttdata.Value.MqttTls;
+        _mqttNoFragmentation = Mqttdata.Value.MqttNoFragmentation;
+        _mqttTopic = Mqttdata.Value.MqttTopic;
 
+        _accessId = Tuyadata.Value.TuyaAPIAccessID;
+        _accessSecret = Tuyadata.Value.TuyaAPISecret;
+        TuyaApiRegion = Tuyadata.Value.TuyaAPIRegion;
     }
 
-    private async Task TestConnection()
+    private async Task TestTuyaApi()
+    {
+        try
+        {
+            _isInWait = true;
+            StateHasChanged();
+            
+            await TuyaService.TestCloudAPIAsync(_accessId, _accessSecret, TuyaApiRegion);
+
+            Snackbar.Add("API connection successful", Severity.Success);
+            Logger.LogInformation($"Test connection to Tuya API successful.");
+        }
+        catch (Exception e)
+        {
+            Snackbar.Add($"API connection error<p>{e.Message}", Severity.Error);
+            Logger.LogError(e, $"API test connection failed.");
+        }
+        finally
+        {
+            _isInWait = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task TestDeviceConnection()
     {
         try
         {
@@ -149,9 +220,9 @@
                 MqttNoFragmentation = _mqttNoFragmentation
             };
 
-            isInWait = true;
+            _isInWait = true;
             StateHasChanged();
-            var result = await client.TestAsync(options);
+            var result = await Client.TestAsync(options);
             if (result)
             {
                 Snackbar.Add("Connected to MQTT broker", Severity.Success);
@@ -170,14 +241,14 @@
         }
         finally
         {
-            isInWait = false;
+            _isInWait = false;
             StateHasChanged();
         }
 
     }
 
 
-    private void SaveMqtt()
+    private void SaveData()
     {
         Logger.LogInformation($"Save MQTT Settings addr:{_mqttHost} port:{_mqttPort} topic:{_mqttTopic}");
         if (!int.TryParse(_mqttPort, out var port))
@@ -185,7 +256,7 @@
             port = 0;
             _mqttPort = "";
         }
-        data.Update((opt) =>
+        Mqttdata.Update((opt) =>
         {
             opt.MqttHost = _mqttHost;
 
@@ -199,7 +270,16 @@
             opt.MqttNoFragmentation = _mqttNoFragmentation;
         });
 
+        Logger.LogInformation($"Save TUYA Settings AccessID:{_accessId}");
+        Tuyadata.Update((opt) =>
+        {
+            opt.TuyaAPIAccessID = _accessId;
+            opt.TuyaAPISecret = _accessSecret;
+            opt.TuyaAPIRegion = TuyaApiRegion;
+        });
+
         Snackbar.Add("Settings saved", Severity.Success);
     }
+
 
 }

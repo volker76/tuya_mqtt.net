@@ -6,6 +6,7 @@
 @inject TuyaCommunicatorService TuyaService;
 @inject TuyaConnectedDeviceService TuyaConnectedDevices;
 @inject NavigationManager NavManager
+@* ReSharper disable once InconsistentNaming *@
 @inject IJSRuntime JS;
 @inject ISnackbar Snackbar;
 @inject ILogger<TuyaDevices> Logger;
@@ -13,9 +14,8 @@
 
 
 <PageTitle>Tuya Devices</PageTitle>
-
+@* ReSharper disable UnknownCssClass *@
 <h1>Tuya Devices</h1>
-
 <MudCard>
     <MudCardHeader>
         <CardHeaderContent>
@@ -32,53 +32,89 @@
 </MudCard>
 <MudExpansionPanels MultiExpansion="true" Class="pt-4">
     <MudExpansionPanel @ref=_expansionList IsInitiallyExpanded=true Text="Scanned Network Devices">
-        <TuyaScannedDevices ScannedDevicesList="_tuyaScannedDevices" MonitoredDevices="_tuyaMonitoredDevices" OnClick="AddChangeTuyaDeviceFromScan" />
+        <TuyaScannedDevices ScannedDevicesList="_tuyaScannedDevices" MonitoredDevices="_tuyaMonitoredDevices" OnClick="AddOrChangeTuyaDeviceFromScan" />
     </MudExpansionPanel>
     <div class="AddSection">
-    <MudExpansionPanel @ref=_expansionAdd IsInitiallyExpanded=false Text="Add/Change Connected Device">
-        <MudPaper>
-           
-            <MudStack Row="true" Class="align-center">
-                    <MudTextField @bind-Value="_tuyaDeviceIp" Label="Adress/IP" HelperText="Device IP in the local network" Variant="Variant.Text"></MudTextField>
-                    <MudButton Variant="Variant.Filled" Style="height: 40px" Color="Color.Primary" OnClick="TestTuyaDevice">Test Connection</MudButton>
-            </MudStack>
-            <MudStack Row="true" Class="align-top">
-                    <MudTextField @bind-Value="_tuyaId" Label="Device ID" HelperText="Device ID" Variant="Variant.Text"></MudTextField>
-                    <MudSelect @bind-Value="_tuyaProtocolVersion" ToStringFunc="@ConverterProtocolVersion" T="TuyaProtocolVersion" Label="Protocol version" Style="width:100px" Variant="Variant.Text">
-                        <MudSelectItem Value="@(TuyaProtocolVersion.V31)" />
-                        <MudSelectItem Value="@(TuyaProtocolVersion.V33)" />
-                    </MudSelect>
-            </MudStack>
-            <MudTextField @bind-Value="_tuyaLocalKey" Label="Local Key" HelperText="secure key of the device" Variant="Variant.Text"></MudTextField>
+        <MudExpansionPanel Class="mt-3" @ref=_expansionAdd IsInitiallyExpanded=false Text="Add/Change Connected Device">
+            <MudPaper>
+                
+                <MudToggleIconButton @bind-Toggled="@CloudMode" Disabled="@ApiDisabled"
+                                     Icon="@Icons.Material.Filled.Cloud" Color="@Color.Primary" Title="Cloud"
+                                     ToggledIcon="@Icons.Material.Filled.Lan" ToggledColor="@Color.Primary" ToggledTitle="Local"/>
+                <span>@(CloudMode ? "Cloud Mode" : "Local Mode")</span>
 
-            <MudTextField Class="mt-4" @bind-Value="_tuyaName" Label="Name" HelperText="Given name for MQTT" Variant="Variant.Text"></MudTextField>
-            
-            <MudSelect @bind-Value="_tuyaPolltimeValue" ToStringFunc="@ConvertTimeFunc" Dense="true" T="double" Label="Polling interval" Variant="Variant.Text">
-                @foreach (var t in _timeList)
-                {
-                    <MudSelectItem Value="@t"></MudSelectItem>
-                }
-            </MudSelect>
-         
-        </MudPaper>
-        <MudPaper Elevation="0" Class="d-flex justify-end pt-5 ar-2">
-            <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveAddTuyaDevice"  />
-        </MudPaper>
+                <MudStack Row="true" Class="align-center">
+                    <MudTextField @bind-Value="_tuyaDeviceIp" Disabled="@CloudMode" Label="Adress/IP" HelperText="Device IP in the local network" Variant="Variant.Text"></MudTextField>
+                    <MudButton Variant="Variant.Filled" Style="height: 40px" Color="Color.Primary" OnClick="TestTuyaDevice">Test Connection</MudButton>
+                </MudStack>
+                <MudStack Row="true" Class="align-top">
+                    <MudTextField @bind-Value="_tuyaId" Label="Device ID" HelperText="Device ID" Variant="Variant.Text"></MudTextField>
+                    <MudSelect @bind-Value="_tuyaProtocolVersion" Disabled="@CloudMode" ToStringFunc="@ConverterProtocolVersion" T="TuyaProtocolVersion" Label="Protocol version" Style="width: 100px" Variant="Variant.Text">
+                        <MudSelectItem Value="@(TuyaProtocolVersion.V31)"/>
+                        <MudSelectItem Value="@(TuyaProtocolVersion.V33)"/>
+                    </MudSelect>
+                </MudStack>
+
+                <MudStack Row="true" Class="align-center">
+                    <MudTextField @bind-Value="_tuyaLocalKey" Disabled="@CloudMode" Label="Local Key" HelperText="secure key of the device" Variant="Variant.Text"></MudTextField>
+                    <div style="display:@(CloudMode ? "none":"inherit")">
+                        @if (ApiDisabled)
+                        {
+                            <MudTooltip Text="Cloud API require credentials defined">
+                                <MudButton Variant="Variant.Filled" Style="height: 40px" Color="Color.Primary" Disabled="true" OnClick="GetLocalKeyFromAPI">Get from TUYA API</MudButton>
+                            </MudTooltip>
+                        }
+                        else
+                        {
+                            <MudTooltip Text="Retrieve localKey property from cloud API">
+                                <MudButton Variant="Variant.Filled" Style="height: 40px" Color="Color.Primary" Disabled="false" OnClick="GetLocalKeyFromAPI">Get from TUYA API</MudButton>
+                            </MudTooltip>
+                        }
+                    </div>
+
+                </MudStack>
+                <MudStack Row="true" Class="align-center">
+                    <MudTextField Class="mt-4" @bind-Value="_tuyaName" Label="Name" HelperText="Given name for MQTT" Variant="Variant.Text"></MudTextField>
+                    @if (ApiDisabled)
+                    {
+                        <MudTooltip Text="Cloud API require credentials defined">
+                            <MudButton Variant="Variant.Filled" Style="height: 40px" Color="Color.Primary" Disabled="true" OnClick="GetDeviceNameFromAPI">Get from TUYA API</MudButton>
+                        </MudTooltip>
+                    }
+                    else
+                    {
+                        <MudTooltip Text="Retrieve custom name property from cloud API">
+                            <MudButton Variant="Variant.Filled" Style="height: 40px" Color="Color.Primary" Disabled="false" OnClick="GetDeviceNameFromAPI">Get from TUYA API</MudButton>
+                        </MudTooltip>
+                    }
+                </MudStack>
+                <MudSelect @bind-Value="_tuyaPolltimeValue" ToStringFunc="@ConvertTimeFunc" Dense="true" T="double" Label="Polling interval" Variant="Variant.Text">
+                    @foreach (var t in _timeList)
+                    {
+                        <MudSelectItem Value="@t"></MudSelectItem>
+                    }
+                </MudSelect>
+
+            </MudPaper>
+            <MudPaper Elevation="0" Class="d-flex justify-end pt-5 ar-2">
+                <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveAddTuyaDevice"  />
+            </MudPaper>
         <MudOverlay Visible=@_isInWait DarkBackground="true" Absolute="true">
             <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
         </MudOverlay>
     </MudExpansionPanel>
     </div>
-    <MudExpansionPanel Text="Connected Devices & Data">
-        <TuyaMonitoredDevices MonitoredDevices="_tuyaMonitoredDevices" MonitoredData="_tuyaMonitoredData" OnClick="AddChangeTuyaDeviceFromMonitor" />
+    <MudExpansionPanel Class="mt-3" Text="Connected Devices & Data">
+        <TuyaMonitoredDevices MonitoredDevices="_tuyaMonitoredDevices" MonitoredData="_tuyaMonitoredData" OnClick="AddOrChangeTuyaDeviceFromMonitor" />
     </MudExpansionPanel>
 </MudExpansionPanels>
-
+@* ReSharper restore UnknownCssClass *@
 @code {
-    private BrowserService? Browser;
-    private bool _isInWait = false;
-    private MudExpansionPanel? _expansionList = null;
-    private MudExpansionPanel? _expansionAdd = null;
+    private bool _cloudMode;
+    private BrowserService? _browser;
+    private bool _isInWait;
+    private MudExpansionPanel? _expansionList;
+    private MudExpansionPanel? _expansionAdd;
 
     private readonly double[] _timeList = { 500,1,2,5,10,30,60 };
 
@@ -117,20 +153,21 @@
 
     protected override void OnInitialized()
     {
-        Browser = new BrowserService(BrowserServiceLogger);
+        _browser = new BrowserService(BrowserServiceLogger);
         Snackbar.Clear();
         _tuyaScannedDevices = TuyaService.GetTuyaScanDevices();
         _tuyaMonitoredDevices = TuyaConnectedDevices.GetMonitoredDevices();
         _tuyaMonitoredData = TuyaConnectedDevices.GetMonitoredData();
         TuyaConnectedDevices.OnDataUpdate += OnTuyaDataUpdate;
         TuyaService.OnTuyaScannerUpdate += OnTuyaScannerUpdate;
+
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await Browser!.InitAsync(JS);
+            await _browser!.InitAsync(JS);
         }
     }
 
@@ -139,24 +176,63 @@
         NavManager.NavigateTo("/settings");
     }
 
-    private async void AddChangeTuyaDeviceFromMonitor(string ID)
+    private bool ApiDisabled
     {
-        var devInfo = TuyaConnectedDevices.GetDevice(ID);
-        if (devInfo != null)
+        get
         {
-
-            await AddItemsToForm(devInfo.Address, ID, devInfo.ProtocolVersion);
+            return !TuyaService.TuyaApiConfigured;
         }
     }
 
-    private async void AddChangeTuyaDeviceFromScan(TuyaDeviceScanInfo clicked)
+    private bool CloudMode
     {
-        var pv = TuyaProtocolVersion.V33;
-        if (clicked.Version == "3.1") pv = TuyaProtocolVersion.V31;
-        await AddItemsToForm(clicked.IP, clicked.GwId, pv);
+        get
+        {
+            return _cloudMode && !ApiDisabled;
+        }
+        set
+        {
+            _cloudMode = value;
+        }
     }
 
-    private async Task AddItemsToForm(string addr, string id, TuyaProtocolVersion pv )
+    private async void AddOrChangeTuyaDeviceFromMonitor(string id)
+    {
+        var devInfo = TuyaConnectedDevices.GetDevice(id);
+        if (devInfo != null)
+        {
+
+            await AddItemsToForm(devInfo.Address, id, devInfo.ProtocolVersion);
+        }
+    }
+
+    private async void AddOrChangeTuyaDeviceFromScan(TuyaDeviceScanInfo clicked)
+    {
+        if (_tuyaMonitoredDevices?.ContainsKey(clicked.GwId) == true)
+        {
+            //this is a change of existing data
+            await AddItemsToForm(clicked.IP, clicked.GwId);
+        }
+        else
+        {  //new item from scan
+            var pv = TuyaProtocolVersion.V33;
+            if (clicked.Version == "3.1") pv = TuyaProtocolVersion.V31;
+
+            var ret = await TuyaService.GetDeviceDataFromApiAsync(clicked.GwId);
+            string local = ret.Item2;
+            string name = ret.Item3;
+            if (ret.Item1)
+            {
+                await AddItemsToForm(clicked.IP, clicked.GwId, pv, local, name);
+            }
+            else
+            {
+                await AddItemsToForm(clicked.IP, clicked.GwId, pv);
+            }
+        }
+    }
+
+    private async Task AddItemsToForm(string addr, string id, TuyaProtocolVersion pv = TuyaProtocolVersion.V33, string localKey = "", string name = "")
     {
         _tuyaDeviceIp = addr;
         _tuyaId = id;
@@ -171,24 +247,61 @@
             {
                 _tuyaName = "";
             }
-
+            _cloudMode = _tuyaMonitoredDevices[id].CommunicationType == TuyaDeviceInformation.DeviceType.Cloud;
             _tuyaProtocolVersion = _tuyaMonitoredDevices[id].ProtocolVersion;
             _tuyaPolltimeValue = _tuyaMonitoredDevices[id].PollingInterval.TotalSeconds;
         }
         else
         {
-            _tuyaLocalKey = "";
-            _tuyaName = "";
+            _cloudMode = false;
+            _tuyaLocalKey = localKey;
+            _tuyaName = name;
             _tuyaProtocolVersion = pv;
             _tuyaPolltimeValue = 5; //5 seconds default
         }
 
         _expansionList?.Expand(false);
-        _expansionAdd?.Expand(true);
+        _expansionAdd?.Expand();
         await InvokeAsync(StateHasChanged);
         await Task.Delay(500);
-        Browser!.ScrollClassIntoView("div.AddSection", 0).AndForget();
+        _browser!.ScrollClassIntoView("div.AddSection", 0).AndForget();
         await InvokeAsync(StateHasChanged);
+    }
+
+    // ReSharper disable once InconsistentNaming
+    private async Task GetLocalKeyFromAPI()
+    {
+        try
+        {
+            var ret = await TuyaService.GetDeviceDataFromApiAsync(_tuyaId);
+            if (ret.Item1)
+            {
+                _tuyaLocalKey = ret.Item2;
+            }
+        }
+        catch(Exception e)
+        {
+            // ignored
+            Logger.LogError(e, "Error retrieving LocalKey from TuyaApi");
+        }
+    }
+
+    // ReSharper disable once InconsistentNaming
+    private async Task GetDeviceNameFromAPI()
+    {
+        try
+        {
+            var ret = await TuyaService.GetDeviceDataFromApiAsync(_tuyaId);
+            if (ret.Item1)
+            {
+                _tuyaName = ret.Item3;
+            }
+        }
+        catch (Exception e)
+        {
+            // ignored
+            Logger.LogError(e, "Error retrieving DeviceName from TuyaApi");
+        }
     }
 
     private async Task TestTuyaDevice()
@@ -198,7 +311,10 @@
             _isInWait = true;
             StateHasChanged();
             await Task.Delay(100);
-            var device = new Data.TuyaDeviceInformation() { Address = _tuyaDeviceIp, ID = _tuyaId, Key = _tuyaLocalKey, ProtocolVersion=_tuyaProtocolVersion };
+            TuyaDeviceInformation.DeviceType comType = TuyaDeviceInformation.DeviceType.LocalTuya;
+            if (_cloudMode)
+                comType = TuyaDeviceInformation.DeviceType.Cloud;
+            var device = new TuyaDeviceInformation() { Address = _tuyaDeviceIp, ID = _tuyaId, Key = _tuyaLocalKey, ProtocolVersion=_tuyaProtocolVersion, CommunicationType = comType };
 
             var response = await TuyaService.TestConnect(device);
             string message = $"<h3>connected to {_tuyaDeviceIp}</h3>";
@@ -222,7 +338,7 @@
         {
             _isInWait = false;
             StateHasChanged();
-        };
+        }
     }
 
     private async Task SaveAddTuyaDevice()
@@ -238,10 +354,15 @@
             _isInWait = true;
             StateHasChanged();
 
-            var device = new Data.TuyaDeviceInformation() { Address = _tuyaDeviceIp, 
+            TuyaDeviceInformation.DeviceType comType = TuyaDeviceInformation.DeviceType.LocalTuya;
+            if (_cloudMode)
+                comType = TuyaDeviceInformation.DeviceType.Cloud;
+
+            var device = new TuyaDeviceInformation() { Address = _tuyaDeviceIp, 
                 ID = _tuyaId, 
                 Key = _tuyaLocalKey,
-                ProtocolVersion = _tuyaProtocolVersion,
+                CommunicationType = comType,
+                ProtocolVersion = _tuyaProtocolVersion
             };
             
             _ = await TuyaService.TestConnect(device);
@@ -260,7 +381,7 @@
             _isInWait = false;
             _tuyaMonitoredDevices = TuyaConnectedDevices.GetMonitoredDevices();
             StateHasChanged();
-        };
+        }
     }
 
     private void OnTuyaScannerUpdate(object? sender, TuyaDeviceScanInfo item)
