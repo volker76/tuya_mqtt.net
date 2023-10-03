@@ -97,7 +97,12 @@
 
             </MudPaper>
             <MudPaper Elevation="0" Class="d-flex justify-end pt-5 ar-2">
-                <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveAddTuyaDevice"  />
+                <MudTooltip Text="Save device to monitored list">
+                    <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveAddTuyaDevice"/>
+                </MudTooltip>
+                <MudTooltip Text="delete device from monitored list">
+                    <MudFab Disabled="@(!_enableDelete)" Class="ml-4" Color="Color.Primary" StartIcon="@Icons.Material.Filled.DeleteSweep" OnClick="DeleteTuyaDevice" />
+                </MudTooltip>
             </MudPaper>
         <MudOverlay Visible=@_isInWait DarkBackground="true" Absolute="true">
             <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
@@ -128,6 +133,7 @@
     private string _tuyaLocalKey = string.Empty;
     private string _tuyaName = string.Empty;
     private double _tuyaPolltimeValue = 10;
+    private bool _enableDelete = false;
 
     private static string ConverterProtocolVersion(TuyaProtocolVersion p)
     {
@@ -238,6 +244,7 @@
         _tuyaId = id;
         if (_tuyaMonitoredDevices?.ContainsKey(id) == true)
         {
+            _enableDelete = true;
             _tuyaLocalKey = _tuyaMonitoredDevices[id].Key;
             if (_tuyaMonitoredDevices[id].hasName)
             {
@@ -258,6 +265,7 @@
             _tuyaName = name;
             _tuyaProtocolVersion = pv;
             _tuyaPolltimeValue = 5; //5 seconds default
+            _enableDelete = false;
         }
 
         _expansionList?.Expand(false);
@@ -337,6 +345,30 @@
         finally
         {
             _isInWait = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteTuyaDevice()
+    {
+        try
+        {
+            _isInWait = true;
+            StateHasChanged();
+
+            TuyaConnectedDevices.RemoveDevice(_tuyaId);
+
+            Snackbar.Add($"Device removed", Severity.Success);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, $"Error removing device {_tuyaDeviceIp} {_tuyaId}");
+            Snackbar.Add($"Remove error", Severity.Error);
+        }
+        finally
+        {
+            _isInWait = false;
+            _tuyaMonitoredDevices = TuyaConnectedDevices.GetMonitoredDevices();
             StateHasChanged();
         }
     }
