@@ -70,9 +70,7 @@
 
     private void CalculateNewLogComponentHeight(WindowSize viewportSize, BrowserService.BoundingClientRect logComponentClientRect)
     {
-#pragma warning disable CS1030
 #warning TODO - find out where this offset of ~66 come from
-#pragma warning restore CS1030
         LogWindowHeight = viewportSize.Height - (int)logComponentClientRect.Top - 66;
     }
 

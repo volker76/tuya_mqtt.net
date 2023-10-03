@@ -69,8 +69,6 @@ namespace tuya_mqtt.net.Data
             finally { _rwl.ReleaseReaderLock(); }
         }
 
-
-
         private void CleanupDictionary()
         {
             try
