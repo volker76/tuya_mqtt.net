@@ -98,7 +98,7 @@
             </MudPaper>
             <MudPaper Elevation="0" Class="d-flex justify-end pt-5 ar-2">
                 <MudTooltip Text="Save device to monitored list">
-                    <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveAddTuyaDevice"/>
+                    <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveAddTuyaDeviceAsync"/>
                 </MudTooltip>
                 <MudTooltip Text="delete device from monitored list">
                     <MudFab Disabled="@(!_enableDelete)" Class="ml-4" Color="Color.Primary" StartIcon="@Icons.Material.Filled.DeleteSweep" OnClick="DeleteTuyaDevice" />
@@ -349,7 +349,7 @@
         }
     }
 
-    private async Task DeleteTuyaDevice()
+    private void DeleteTuyaDevice()
     {
         try
         {
@@ -373,7 +373,7 @@
         }
     }
 
-    private async Task SaveAddTuyaDevice()
+    private async Task SaveAddTuyaDeviceAsync()
     {
         if (_tuyaPolltimeValue <= 0)
         {
