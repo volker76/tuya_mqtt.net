@@ -11,6 +11,11 @@
 	  <ScopedCssEnabled>true</ScopedCssEnabled>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+	  <DockerfileBuildArguments>--build-arg DEBUGHELPER:yes</DockerfileBuildArguments>
+  </PropertyGroup>	
+	
+
   <ItemGroup>
     <Compile Remove="DataDir\**" />
     <Compile Remove="MQTTnet\**" />

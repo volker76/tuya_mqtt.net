@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using tuya_mqtt.net.Data;
+using tuya_mqtt.net.Helper;
 
 namespace tuya_mqtt.net.Services
 {
@@ -10,6 +11,7 @@ namespace tuya_mqtt.net.Services
         private readonly LogNotificationServiceOptions _options;
         private readonly List<LogItem> _messages;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1); 
+        private RateCounter _errorRate = new RateCounter(TimeSpan.FromSeconds(60));
         public LogNotificationService(ILogger<LogNotificationService> logger, IOptions<LogNotificationServiceOptions> options)
         {
             _logger = logger;
@@ -28,6 +30,11 @@ namespace tuya_mqtt.net.Services
                 }
 
                 _messages.Add(logItem);
+
+                if (logItem.LogLevel == LogLevel.Error) // count the error in the rate per minute
+                {
+                    _errorRate.Count();
+                }
 
                 OnLogAdded?.Invoke(this, logItem);
             }
@@ -150,6 +157,11 @@ namespace tuya_mqtt.net.Services
             }
 
             return "     ";
+        }
+
+        public int GetExceptionCountPerMinute()
+        {
+            return _errorRate.Rate;
         }
     }
 }

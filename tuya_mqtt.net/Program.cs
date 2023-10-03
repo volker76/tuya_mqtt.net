@@ -1,4 +1,6 @@
 using Awesome.Net.WritableOptions.Extensions;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
 using tuya_mqtt.net.Data;
@@ -46,6 +48,10 @@ namespace tuya_mqtt.net
             builder.Services.ConfigureWritableOptions<TuyaCommunicatorOptions>(builder.Configuration, "TuyaAPI", DataFile);
             builder.Services.ConfigureWritableOptions<TuyaMonitoredDeviceOptions>(builder.Configuration, "TuyaDevices", DataFile);
 
+            builder.Services.AddHealthChecks()
+                .AddCheck<ExceptionCheckHealthService>("exceptions_check")
+                .AddCheck<MqttConnectionHealthService>("mqtt_check");
+
             var app = builder.Build();
 
             _logger = app.Services.GetService<ILogger<Program>>();
@@ -76,6 +82,20 @@ namespace tuya_mqtt.net
             app.UseStaticFiles();
 
             app.UseRouting();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapHealthChecks("/health", new HealthCheckOptions()
+                {
+                    ResponseWriter = HealthCheckResponse.WriteResponse,
+                    ResultStatusCodes =
+                    {
+                        [HealthStatus.Healthy] = StatusCodes.Status200OK,
+                        [HealthStatus.Degraded] = StatusCodes.Status200OK,
+                        [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
+                    }
+                });
+            });
 
             app.MapBlazorHub();
             app.MapFallbackToPage("/_Host");

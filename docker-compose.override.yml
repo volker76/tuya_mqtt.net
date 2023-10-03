@@ -10,5 +10,6 @@ services:
       dockerfile: Dockerfile
       args:
             GIT_COMMIT: local
+            DEBUGHELPER: yes
     ports:
       - "80"

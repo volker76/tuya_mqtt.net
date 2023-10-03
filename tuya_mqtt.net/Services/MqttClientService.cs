@@ -21,6 +21,7 @@ namespace tuya_mqtt.net.Services
         private readonly IMqttSubscriptionService _subscriptionService;
         private readonly MemoryCache _publishedDataCache = new MemoryCache(new MemoryCacheOptions());
         private readonly IOptionsMonitor<GlobalOptions> _globalOptions;
+        private DateTime _lastHeartbeatTime;
 
         // ReSharper disable once InconsistentNaming
         private readonly MemoryCacheEntryOptions CacheEntryOptions = new MemoryCacheEntryOptions()
@@ -66,6 +67,7 @@ namespace tuya_mqtt.net.Services
             _mqttfactory = new MqttFactory();
             _autoReconnect = false;
             _subscriptionService = subscriptionService;
+            _lastHeartbeatTime = DateTime.UtcNow;
 
             _ = new Timer(MqttHeartbeat, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(10));
 
@@ -82,6 +84,7 @@ namespace tuya_mqtt.net.Services
             {
                 var topic = GlobalMqttTopic + "/" + $"TS";
                 UpdateTimeStampAsync(topic).GetAwaiter().GetResult();
+                _lastHeartbeatTime = DateTime.UtcNow;
             }
         }
 
@@ -270,6 +273,7 @@ namespace tuya_mqtt.net.Services
 #if DEBUG
             args.DumpToConsole();
 #endif
+
             _subscriptionService.ClearAll();
             await Task.Run(() =>
             {
@@ -357,6 +361,15 @@ namespace tuya_mqtt.net.Services
                     return "";
 
                 return Options.MqttTopic.Trim(StringHelper.WhiteSpaceCharsPlus(new[] { '/', '\\' })) + "/";
+            }
+        }
+
+        public TimeSpan DisconnectTime
+        {
+            get
+            {
+                if (IsConnected) return TimeSpan.Zero;
+                return DateTime.UtcNow - _lastHeartbeatTime;
             }
         }
 

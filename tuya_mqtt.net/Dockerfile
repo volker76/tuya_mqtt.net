@@ -2,13 +2,17 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
 ENV DOTNET_CLI_HOME=/tmp
 WORKDIR /app
 EXPOSE 80
-
+ARG DEBUGHELPER
 ENV TZ=EUROPE/Berlin
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-RUN apt-get update
-RUN apt install -y tzdata
-RUN apt install -y arping inetutils-ping libnet-ifconfig-wrapper-perl mc
+HEALTHCHECK CMD curl --fail http://localhost:80/health || exit
+RUN apt-get update && \
+    apt install -y curl
 
+RUN if [ "$DEBUGHELPER" = "yes" ] ; then \
+    apt install -y tzdata && \
+    apt install -y arping inetutils-ping libnet-ifconfig-wrapper-perl mc \
+    ; fi
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
@@ -48,4 +52,5 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
 ENTRYPOINT ["dotnet", "tuya_mqtt.net.dll"]
