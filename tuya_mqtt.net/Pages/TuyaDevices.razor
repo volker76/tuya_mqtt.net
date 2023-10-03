@@ -247,7 +247,7 @@
             {
                 _tuyaName = "";
             }
-            _cloudMode = _tuyaMonitoredDevices[id].CloudMode;
+            _cloudMode = _tuyaMonitoredDevices[id].CommunicationType == TuyaDeviceInformation.DeviceType.Cloud;
             _tuyaProtocolVersion = _tuyaMonitoredDevices[id].ProtocolVersion;
             _tuyaPolltimeValue = _tuyaMonitoredDevices[id].PollingInterval.TotalSeconds;
         }
@@ -313,7 +313,10 @@
             _isInWait = true;
             StateHasChanged();
             await Task.Delay(100);
-            var device = new TuyaDeviceInformation() { Address = _tuyaDeviceIp, ID = _tuyaId, Key = _tuyaLocalKey, ProtocolVersion=_tuyaProtocolVersion, CloudMode = _cloudMode };
+            TuyaDeviceInformation.DeviceType comType = TuyaDeviceInformation.DeviceType.LocalTuya;
+            if (_cloudMode)
+                comType = TuyaDeviceInformation.DeviceType.Cloud;
+            var device = new TuyaDeviceInformation() { Address = _tuyaDeviceIp, ID = _tuyaId, Key = _tuyaLocalKey, ProtocolVersion=_tuyaProtocolVersion, CommunicationType = comType };
 
             var response = await TuyaService.TestConnect(device);
             string message = $"<h3>connected to {_tuyaDeviceIp}</h3>";
@@ -353,10 +356,14 @@
             _isInWait = true;
             StateHasChanged();
 
+            TuyaDeviceInformation.DeviceType comType = TuyaDeviceInformation.DeviceType.LocalTuya;
+            if (_cloudMode)
+                comType = TuyaDeviceInformation.DeviceType.Cloud;
+
             var device = new TuyaDeviceInformation() { Address = _tuyaDeviceIp, 
                 ID = _tuyaId, 
                 Key = _tuyaLocalKey,
-                CloudMode = _cloudMode,
+                CommunicationType = comType,
                 ProtocolVersion = _tuyaProtocolVersion
             };
             
