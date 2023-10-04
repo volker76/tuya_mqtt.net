@@ -2,18 +2,18 @@
 
 namespace tuya_mqtt.net.Data
 {
-    public class SubscriptionKey :Tuple<int,string>
+    public class SubscriptionKey :Tuple<byte,string>
     {
         public string ID
         {
             get => base.Item2;
         }
-        public int DpNumber
+        public byte DpNumber
         {
             get => base.Item1;
         }
 
-        public SubscriptionKey(string id, int dp):base(dp,id)
+        public SubscriptionKey(string id, byte dp):base(dp,id)
         {
         }
 

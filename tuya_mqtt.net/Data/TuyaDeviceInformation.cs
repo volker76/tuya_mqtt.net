@@ -1,11 +1,12 @@
 ﻿using com.clusterrr.TuyaNet;
 using Newtonsoft.Json;
+// ReSharper disable InconsistentNaming
 
 namespace tuya_mqtt.net.Data
 {
     public class TuyaDeviceInformation
     {
-        public enum DeviceType
+        public enum TuyaDeviceType
         {
             LocalTuya0A = 1,
             LocalTuya0D = 2,
@@ -30,24 +31,25 @@ namespace tuya_mqtt.net.Data
         public string Key { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
         public TuyaProtocolVersion ProtocolVersion { get; set; } = TuyaProtocolVersion.V33;
-        public DeviceType CommunicationType { get; set; } = DeviceType.LocalTuya0A;
+        public TuyaDeviceType CommunicationType { get; set; } = TuyaDeviceType.LocalTuya0A;
         
     }
 
     public class TuyaExtendedDeviceInformation : TuyaDeviceInformation
     {
         private string _name = String.Empty;
-        private bool _locked = false;
+        private bool _locked;
 
         public TuyaExtendedDeviceInformation()
         {
 
         }
-        public TuyaExtendedDeviceInformation(TuyaDeviceInformation device, string name, TimeSpan pollingInterval):base(device)
+        public TuyaExtendedDeviceInformation(TuyaDeviceInformation device, string name, TimeSpan pollingInterval, List<byte> DPlist):base(device)
         {
             _name = name;
             PollingInterval = pollingInterval;
             LastTriggered = DateTime.MinValue;
+            MonitoredDPs = DPlist;
         }
 
         [JsonIgnore]
@@ -107,6 +109,24 @@ namespace tuya_mqtt.net.Data
             }
         }
 
-        public List<int> monitoredDPs { get; set; } = new List<int>();
+        public List<byte> MonitoredDPs { get; set; } = new List<byte>();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string MonitoredDPsString
+        {
+            get
+            {
+                string result = String.Empty;
+                MonitoredDPs.Sort();
+                foreach (var dp in MonitoredDPs)
+                {
+                    result += dp.ToString()+ " ";
+                }
+                return result.Trim(); //remove last ' ' from list
+            }
+        }
     }
 }

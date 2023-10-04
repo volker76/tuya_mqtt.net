@@ -1,21 +1,22 @@
 ﻿using Newtonsoft.Json.Linq;
+using System.Reflection.Metadata.Ecma335;
 
 namespace tuya_mqtt.net.Data
 {
     // ReSharper disable once InconsistentNaming
     public class DP
     {
-        private readonly int _dpNo;
+        private readonly byte _dpNo;
         private readonly string _valueString;
 
-        public DP(int dpNo, string value)
+        public DP(byte dpNo, string value)
         {
             this._dpNo = dpNo;
             this._valueString = value;
         }
 
         // ReSharper disable once InconsistentNaming
-        public static List<DP> ParseCloudJSON(string json)
+        public static List<DP> ParseCloudJSON(string json, List<byte>? DPList = null)
         {
             var list = new List<DP>();
             try
@@ -31,10 +32,11 @@ namespace tuya_mqtt.net.Data
                
                         if (value != null && name != null)
                         {
-                            int id;
-                            if (int.TryParse(name.ToString(), out id))
+                            byte id;
+                            if (byte.TryParse(name.ToString(), out id))
                             {
-                                list.Add(new DP(id, value.ToString()));
+                                if (IdInList(id, DPList))
+                                    list.Add(new DP(id, value.ToString()));
                             }
 
                         }
@@ -49,8 +51,22 @@ namespace tuya_mqtt.net.Data
             }
         }
 
+        private static bool IdInList(byte id, List<byte>? dPList)
+        {
+            if (dPList == null) return true; //default we take it all
+            else
+            {
+                if (dPList.Count == 0) return true; //empty list means we take all
+                else
+                {
+                    if (dPList.Contains(id)) return true;
+                }
+            }
+            return false;
+        }
+
         // ReSharper disable once InconsistentNaming
-        public static List<DP> ParseLocalJSON(string json)
+        public static List<DP> ParseLocalJSON(string json, List<byte>? DPList = null)
         {
 
             var list = new List<DP>();
@@ -64,10 +80,11 @@ namespace tuya_mqtt.net.Data
                     {
                         var name = ((JProperty)d).Name;
                         var value = d;
-                        int id;
-                        if (int.TryParse(name, out id))
+                        byte id;
+                        if (byte.TryParse(name, out id))
                         {
-                            list.Add(new DP(id, value.ToObject<string>()!));
+                            if (IdInList(id, DPList))
+                                list.Add(new DP(id, value.ToObject<string>()!));
                         }
                     }
                 }
@@ -80,7 +97,7 @@ namespace tuya_mqtt.net.Data
         }
 
         // ReSharper disable once InconsistentNaming
-        public static string FindPropertyByDP(string json, int dpNumber)
+        public static string FindPropertyByDP(string json, byte dpNumber)
         {
             try
             {
@@ -109,7 +126,7 @@ namespace tuya_mqtt.net.Data
         }
 
         // ReSharper disable once InconsistentNaming
-        public int DPNumber { get { return _dpNo; } }
+        public byte DPNumber { get { return _dpNo; } }
         public string Value { get { return _valueString; } }
 
     }

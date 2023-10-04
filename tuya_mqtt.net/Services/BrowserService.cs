@@ -43,7 +43,7 @@ namespace tuya_mqtt.net.Services
             }
             catch (Exception ex)
             {
-
+                _logger.LogError(ex,$"error scrolling html item to view");
             }
         }
 
