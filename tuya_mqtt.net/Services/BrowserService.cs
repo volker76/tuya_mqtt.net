@@ -5,23 +5,23 @@ using tuya_mqtt.net.Data;
 
 namespace tuya_mqtt.net.Services
 {
-    public class BrowserService : IAsyncDisposable
+    public class BrowserService : IBrowserService, IAsyncDisposable
     {
 
         private readonly ILogger _logger;
-        private readonly Lazy<Task<IJSObjectReference>> moduleTask;
+        private readonly Lazy<Task<IJSObjectReference>> _moduleTask;
 
         public BrowserService(ILogger<BrowserService> logger, IJSRuntime jsRuntime)
         {
             _logger = logger;
 
-            moduleTask = new(() => jsRuntime.InvokeAsync<IJSObjectReference>(
+            _moduleTask = new(() => jsRuntime.InvokeAsync<IJSObjectReference>(
                 "import", "/lib/BrowserService.js").AsTask());
         }
 
         public async Task<TimeSpan> GetTimeZoneOffset()
         {
-            var module = await moduleTask.Value;
+            var module = await _moduleTask.Value;
             int i = await module.InvokeAsync<int>("timeZoneOffset");
             return TimeSpan.FromMinutes(-i);
 
@@ -29,20 +29,27 @@ namespace tuya_mqtt.net.Services
 
         public async Task<string> GetBrowserLanguage()
         {
-            var module = await moduleTask.Value;
+            var module = await _moduleTask.Value;
             return await module.InvokeAsync<string>("getBrowserLanguage");
         }
         
         public async Task ScrollClassIntoView(string classSearchString, int index)
         {
-            var module = await moduleTask.Value;
+            try
+            {
+                var module = await _moduleTask.Value;
 
-            await module.InvokeVoidAsync("scrollToElement", new object[] { classSearchString, index });
+                await module.InvokeVoidAsync("scrollToElement", new object[] { classSearchString, index });
+            }
+            catch (Exception ex)
+            {
+
+            }
         }
 
         public async Task DownloadStreamAsync(string fileName, Stream fileStream)
         {
-            var module = await moduleTask.Value;
+            var module = await _moduleTask.Value;
 
             using var streamRef = new DotNetStreamReference(stream: fileStream);
 
@@ -63,15 +70,13 @@ namespace tuya_mqtt.net.Services
             }
         }
 
-
-
         public async ValueTask DisposeAsync()
         {
             try
             {
-                if (moduleTask.IsValueCreated)
+                if (_moduleTask.IsValueCreated)
                 {
-                    var module = await moduleTask.Value;
+                    var module = await _moduleTask.Value;
                     await module.DisposeAsync();
                 }
                 Dispose(true);

@@ -62,7 +62,7 @@ namespace tuya_mqtt.net.Services
             TimeSpan delta_time = timezoneoffset ?? TimeSpan.Zero;
             var stream = new MemoryStream();
             var writer = new StreamWriter(stream);
-            CultureInfo culture = new CultureInfo("en-us");
+            CultureInfo culture = new CultureInfo(language);
 
             foreach (var item in _messages)
             {

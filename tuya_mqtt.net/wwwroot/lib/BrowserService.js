@@ -4,7 +4,7 @@ export function scrollToElement(elem,index) {
     $(elem).get(index).scrollIntoView()
 }
 
-export function timeZoneOffset()  {
+export function timeZoneOffset() {
     return new Date().getTimezoneOffset();
 }
 
@@ -12,8 +12,7 @@ export function getBrowserLanguage() {
     return (navigator.languages && navigator.languages.length) ? navigator.languages[0] :
         navigator.userLanguage || navigator.language || navigator.browserLanguage || 'en';
 }
-
-export function downloadFileFromStream(fileName, contentStreamReference) {
+export async function downloadFileFromStream(fileName, contentStreamReference) {
     const arrayBuffer = await contentStreamReference.arrayBuffer();
     const blob = new Blob([arrayBuffer]);
     const url = URL.createObjectURL(blob);

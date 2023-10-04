@@ -10,7 +10,8 @@
 @inject IJSRuntime JS;
 @inject ISnackbar Snackbar;
 @inject ILogger<TuyaDevices> Logger;
-@inject ILogger<BrowserService> BrowserServiceLogger;
+@inject ILogger<IBrowserService> BrowserServiceLogger;
+@inject IBrowserService _browser;
 
 
 <PageTitle>Tuya Devices</PageTitle>
@@ -116,7 +117,6 @@
 @* ReSharper restore UnknownCssClass *@
 @code {
     private bool _cloudMode;
-    private BrowserService? _browser;
     private bool _isInWait;
     private MudExpansionPanel? _expansionList;
     private MudExpansionPanel? _expansionAdd;
@@ -172,7 +172,7 @@
     {
         if (firstRender)
         {
-            await _browser!.InitAsync();
+            
         }
     }
 

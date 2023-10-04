@@ -1,11 +1,12 @@
 ﻿@page "/logger"
-@using tuya_mqtt.net.Data;
-@using tuya_mqtt.net.Helper;
+@using tuya_mqtt.net.Services;
+@using BlazorPro.BlazorSize
+@using tuya_mqtt.net.Data
 @* ReSharper disable once InconsistentNaming *@
 @inject ILogger<Logger> LocalLogger
-@inject ILogger<BrowserService> BrowserServiceLogger;
-@inject BrowserService _browser
-@implements IAsyncDisposable
+@inject ILogger<IBrowserService> BrowserServiceLogger;
+@inject IBrowserService _browser
+@inject IResizeListener _listener
 
 <component type="typeof(Logger)" render-mode="Server" />
 
@@ -21,6 +22,9 @@
 
     private int LogWindowHeight { get; set; }
 
+    BrowserWindowSize browser = new BrowserWindowSize();
+
+
     protected override void OnInitialized()
     {
 
@@ -30,64 +34,26 @@
     {
         if (firstRender)
         {
-            await _browser!.InitAsync();
-            _browser!.Resize += OnResize;
+            _listener.OnResized += WindowResizedA;
 
-            var rect = await _browser.GetElementClientRectAsync(_myElementReference);
-
-            CalculateNewLogComponentHeight(new WindowSize() { Height = _browser!.BrowserHeight, Width = _browser!.BrowserWidth }, rect);
+            browser = await _listener.GetBrowserWindowSize();
+            CalculateLogWindowHeight();
             StateHasChanged();
         }
-
     }
 
-    private bool _resize;
-    private async void OnResize(object? obj, WindowSize newSize)
+    async void WindowResizedA(object _, BrowserWindowSize window)
     {
-        try
-        {
-            if (_resize) return;
-            _resize = true;
+        browser = window;
 
-            if (_browser!.IsInitialized)
-            {
-                try
-                {
-#if DEBUG
-                LocalLogger.LogDebug($"OnResize {_myElementReference}", _myElementReference);
-#endif
-                    var rect = await _browser!.GetElementClientRectAsync(_myElementReference);
-
-                    CalculateNewLogComponentHeight(newSize, rect);
-                    StateHasChanged();
-                }
-                catch (Exception e)
-                {
-                    LocalLogger.LogError(e, "Error in OnResize");
-                }
-            }
-            else
-            {
-                LocalLogger.LogWarning("calling Resize, but not having Browser object initialized");
-            }
-        }
-        finally
-        {
-            _resize = false;
-        }
+        CalculateLogWindowHeight();
+        
+        StateHasChanged();
     }
 
-    private void CalculateNewLogComponentHeight(WindowSize viewportSize, BrowserService.BoundingClientRect logComponentClientRect)
+    private void CalculateLogWindowHeight()
     {
-
-#warning TODO - find out where this offset of ~66 come from
-
-        LogWindowHeight = viewportSize.Height - (int)logComponentClientRect.Top - 66;
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await _browser.DisposeAsync();
+        LogWindowHeight = browser.Height - 300;
     }
 
 }
