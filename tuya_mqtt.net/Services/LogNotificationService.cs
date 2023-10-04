@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using System.Globalization;
 using tuya_mqtt.net.Data;
 using tuya_mqtt.net.Helper;
 
@@ -56,15 +57,16 @@ namespace tuya_mqtt.net.Services
             finally { _semaphore.Release(); }
         }
 
-        public Stream GetLogFile()
+        public Stream GetLogFile(TimeSpan? timezoneoffset = null, string language = "en-us")
         {
-
+            TimeSpan delta_time = timezoneoffset ?? TimeSpan.Zero;
             var stream = new MemoryStream();
             var writer = new StreamWriter(stream);
+            CultureInfo culture = new CultureInfo("en-us");
+
             foreach (var item in _messages)
             {
-#warning need TS to be converted to UTC
-                var dt = item.TimeStamp.ToString("u");
+                var dt = (item.TimeStamp + delta_time).ToString("G",culture); //convert to UTC
                 writer.Write(dt);
                 writer.Write(" ");
                 writer.Write(FormatLogLevel(item.LogLevel));

@@ -1,4 +1,5 @@
 ﻿@using System.Diagnostics;
+@using System.Globalization
 @using tuya_mqtt.net.Helper;
 @using Microsoft.JSInterop;
 @using tuya_mqtt.net.Services;
@@ -7,9 +8,9 @@
 @inject LogNotificationService LogService;
 @inject ILogger<LogComponent> Logger;
 @inject ILogger<BrowserService> BrowserServiceLogger;
-@* ReSharper disable once InconsistentNaming *@
 @inject IJSRuntime JS;
-@* ReSharper disable UnknownCssClass *@
+@inject BrowserService _browser;
+
 
 <script suppress-error="BL9992">
     window.downloadFileFromStream = async (fileName, contentStreamReference) => {
@@ -24,6 +25,7 @@
         URL.revokeObjectURL(url);
     }
 </script>
+
 <MudPaper Width="@GetWidth()" Height="@GetHeight()">
     <div class="d-flex flex-row flex-grow-1 gap-4">
         <MudSwitch @bind-Checked="@ScrollBottom" Label="Keep scroll to bottom" Color="Color.Primary"/>
@@ -54,8 +56,6 @@
     private List<LogItem> _logitems = new List<LogItem>();
     private bool ScrollBottom { get; set; } = true;
 
-    private BrowserService? _browser;
-
     // ReSharper disable once RedundantAttributeSuffix
     [ParameterAttribute]
     public int Height { get; set; } = 0;
@@ -66,8 +66,7 @@
 
     protected override void OnInitialized()
     {
-        _browser = new BrowserService(BrowserServiceLogger);
-        
+
         LogService.OnLogAdded += LogAdded;
         foreach (var item in LogService.GetLogItems())
         {
@@ -94,7 +93,7 @@
     {
         if (firstRender)
         {
-            await _browser!.InitAsync(JS);
+            await _browser!.InitAsync();
         }
 
         await ScrollToEndAsync();
@@ -156,21 +155,26 @@
         Logger.LogError(new Exception("TestException"),"TestError");
     }
 
-    private Stream GetLogFileStream()
+    private Stream GetLogFileStream(TimeSpan timeSpan, string language)
     {
-        return LogService.GetLogFile();
+        return LogService.GetLogFile(timeSpan, language);
         
     }
 
     private async Task SaveLogAsync()
     {
-        var fileStream = GetLogFileStream();
+        var info = CultureInfo.CurrentCulture;
+        var language = await _browser.GetBrowserLanguage();
+
+        var deltaTZ = await _browser.GetTimeZoneOffset();
+
+        var fileStream = GetLogFileStream(deltaTZ, language);
 
         var fileName = $"tuya_mqtt {DateTime.Now:yyyy-MM-dd HH.mm.ss}.log";
 
         using var streamRef = new DotNetStreamReference(stream: fileStream);
 
-        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+        //await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
     }
 
 }

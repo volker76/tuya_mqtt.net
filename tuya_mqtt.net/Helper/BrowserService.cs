@@ -20,67 +20,109 @@ namespace tuya_mqtt.net.Helper
         }
         // ReSharper disable once InconsistentNaming
         // ReSharper disable once RedundantDefaultMemberInitializer
-        private IJSRuntime? JS = null;
+        private readonly IJSRuntime _jsRuntime;
         private readonly ILogger _logger;
         private IJSObjectReference? _jsModule;
         public event EventHandler<WindowSize>? Resize;
         private int _browserWidth;
         private int _browserHeight;
 
-        public BrowserService(ILogger<BrowserService> logger)
+        public BrowserService(ILogger<BrowserService> logger, IJSRuntime jsRuntime)
         {
             _logger = logger;
+            _jsRuntime = jsRuntime;
+
         }
 
         public bool IsInitialized => _jsModule != null;
 
-        public async Task InitAsync(IJSRuntime js)
+        public async Task InitAsync()
         {
             try
             {
-                // enforce single invocation            
-                if (JS == null)
+                _jsModule = await _jsRuntime.InvokeAsync<IJSObjectReference>("import", "/lib/BrowserService.js");
+
+                await _jsModule.InvokeAsync<string>("resizeListener", DotNetObjectReference.Create(this));
+                _logger.LogDebug("BrowserService initialized");
+
+                await GetViewPortSize();
+            }
+            catch (JSException e)
+            {
+                _logger.LogError(e,
+                    "could not initialize BrowserService by calling 'resizeListener' in BrowserService.js");
+                if (Debugger.IsAttached)
                 {
-                    JS = js;
-                    try
-                    {
-                        _jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "/lib/BrowserService.js");
-
-                        await _jsModule.InvokeAsync<string>("resizeListener", DotNetObjectReference.Create(this))
-                            .ConfigureAwait(false);
-                        _logger.LogDebug("BrowserService initialized");
-
-                        await GetViewPortSize().ConfigureAwait(false);
-
-                    }
-                    catch (JSException e)
-                    {
-                        _logger.LogError(e,
-                            "could not initialize BrowserService by calling 'resizeListener' in BrowserService.js");
-                        if (Debugger.IsAttached)
-                        {
-                            Debugger.Break();
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError(e,
-                            "general error initialize BrowserService");
-                        if (Debugger.IsAttached)
-                        {
-                            Debugger.Break();
-                        }
-                    }
+                    //Debugger.Break();
+                    Console.WriteLine(e.Message);
                 }
             }
-            finally
+            catch (Exception e)
             {
-
-
+                _logger.LogError(e,
+                    "general error initialize BrowserService");
+                if (Debugger.IsAttached)
+                {
+                    //Debugger.Break();
+                    Console.WriteLine(e.Message);
+                }
             }
+            //try
+            //{
+            //    // enforce single invocation            
+            //    if (true)
+            //    {
+
+            //        try
+            //        {
+            //            _jsModule = await _jsRuntime.InvokeAsync<IJSObjectReference>("import", "/lib/BrowserService.js");
+
+            //            await _jsModule.InvokeAsync<string>("resizeListener", DotNetObjectReference.Create(this))
+            //                .ConfigureAwait(false);
+            //            _logger.LogDebug("BrowserService initialized");
+
+            //            await GetViewPortSize().ConfigureAwait(false);
+
+            //        }
+            //        catch (JSException e)
+            //        {
+            //            _logger.LogError(e,
+            //                "could not initialize BrowserService by calling 'resizeListener' in BrowserService.js");
+            //            if (Debugger.IsAttached)
+            //            {
+            //                Debugger.Break();
+            //            }
+            //        }
+            //        catch (Exception e)
+            //        {
+            //            _logger.LogError(e,
+            //                "general error initialize BrowserService");
+            //            if (Debugger.IsAttached)
+            //            {
+            //                Debugger.Break();
+            //            }
+            //        }
+            //    }
+            //}
+            //finally
+            //{
+
+
+            //}
 
         }
 
+        public async Task<TimeSpan> GetTimeZoneOffset()
+        {
+            int i = await _jsModule.InvokeAsync<int>("timeZoneOffset");
+            return TimeSpan.FromMinutes(-i);
+            
+        }
+
+        public async Task<string> GetBrowserLanguage()
+        {
+            return await _jsModule.InvokeAsync<string>("getBrowserLanguage");
+        }
         private async Task GetViewPortSize()
         {
            
@@ -92,7 +134,7 @@ namespace tuya_mqtt.net.Helper
                     throw new InvalidOperationException("BrowserService is not initialized. run Init() before.");
                 }
 
-                var ret = await _jsModule.InvokeAsync<List<int>>("viewportSize").ConfigureAwait(false);
+                var ret = await _jsModule.InvokeAsync<List<int>>("viewportSize");
                 if (ret.Count < 2)
                     throw new InvalidOperationException(
                         $"javascript viewportSize did not return two elements {ret}");
@@ -159,7 +201,18 @@ namespace tuya_mqtt.net.Helper
             {
                 throw new InvalidOperationException("BrowserService is not initialized. run Init() before.");
             }
-            var result = await _jsModule.InvokeAsync<BoundingClientRect>("MyGetBoundingClientRect", element);
+
+            BoundingClientRect result;
+            result = new BoundingClientRect();
+            try
+            {
+                result = await _jsModule.InvokeAsync<BoundingClientRect>("MyGetBoundingClientRect", element);
+            }
+            catch (Exception ex)
+            {
+
+            }
+
             _logger.LogDebug($"GetBoundingClientRect ({result.Width},{result.Height})");
             return result;
         }
@@ -208,6 +261,14 @@ namespace tuya_mqtt.net.Helper
             using var streamRef = new DotNetStreamReference(stream: fileStream);
 
             await _jsModule.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+        }
+
+        public async Task DisposeAsync()
+        {
+            if (_jsModule is not null)
+                {
+                    await _jsModule.DisposeAsync();
+                }
         }
     }
 }

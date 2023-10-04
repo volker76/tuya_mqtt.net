@@ -7,7 +7,8 @@ namespace tuya_mqtt.net.Data
     {
         public enum DeviceType
         {
-            LocalTuya = 1,
+            LocalTuya0A = 1,
+            LocalTuya0D = 2,
             Cloud =10,
 
         }
@@ -29,8 +30,8 @@ namespace tuya_mqtt.net.Data
         public string Key { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
         public TuyaProtocolVersion ProtocolVersion { get; set; } = TuyaProtocolVersion.V33;
-        public DeviceType CommunicationType { get; set; } = DeviceType.LocalTuya;
-
+        public DeviceType CommunicationType { get; set; } = DeviceType.LocalTuya0A;
+        
     }
 
     public class TuyaExtendedDeviceInformation : TuyaDeviceInformation
@@ -105,5 +106,7 @@ namespace tuya_mqtt.net.Data
                 _locked = false;
             }
         }
+
+        public List<int> monitoredDPs { get; set; } = new List<int>();
     }
 }

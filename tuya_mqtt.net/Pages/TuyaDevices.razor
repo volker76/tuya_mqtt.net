@@ -159,7 +159,6 @@
 
     protected override void OnInitialized()
     {
-        _browser = new BrowserService(BrowserServiceLogger);
         Snackbar.Clear();
         _tuyaScannedDevices = TuyaService.GetTuyaScanDevices();
         _tuyaMonitoredDevices = TuyaConnectedDevices.GetMonitoredDevices();
@@ -173,7 +172,7 @@
     {
         if (firstRender)
         {
-            await _browser!.InitAsync(JS);
+            await _browser!.InitAsync();
         }
     }
 
@@ -319,7 +318,7 @@
             _isInWait = true;
             StateHasChanged();
             await Task.Delay(100);
-            TuyaDeviceInformation.DeviceType comType = TuyaDeviceInformation.DeviceType.LocalTuya;
+            TuyaDeviceInformation.DeviceType comType = TuyaDeviceInformation.DeviceType.LocalTuya0A;
             if (_cloudMode)
                 comType = TuyaDeviceInformation.DeviceType.Cloud;
             var device = new TuyaDeviceInformation() { Address = _tuyaDeviceIp, ID = _tuyaId, Key = _tuyaLocalKey, ProtocolVersion=_tuyaProtocolVersion, CommunicationType = comType };
@@ -386,7 +385,7 @@
             _isInWait = true;
             StateHasChanged();
 
-            TuyaDeviceInformation.DeviceType comType = TuyaDeviceInformation.DeviceType.LocalTuya;
+            TuyaDeviceInformation.DeviceType comType = TuyaDeviceInformation.DeviceType.LocalTuya0A;
             if (_cloudMode)
                 comType = TuyaDeviceInformation.DeviceType.Cloud;
 
