@@ -30,6 +30,8 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     RID=linux-arm64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
     RID=linux-arm ; \
+    elif [ "$TARGETPLATFORM" = "linux/arm/v6" ]; then \
+    RID=linux-arm ; \
     fi \
     && echo "target $TARGETPLATFORM build $BUILDPLATFORM RID $RID" \
     && date > "/src/Resources/BuildDate.txt" \
@@ -44,6 +46,8 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
     RID=linux-arm64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
+    RID=linux-arm ; \
+    elif [ "$TARGETPLATFORM" = "linux/arm/v6" ]; then \
     RID=linux-arm ; \
     fi \
     && echo "target $TARGETPLATFORM build $BUILDPLATFORM RID $RID" \
