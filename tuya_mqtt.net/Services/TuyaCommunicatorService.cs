@@ -755,10 +755,10 @@ namespace tuya_mqtt.net.Services
             string result = string.Empty;
             foreach (var dp in list)
             {
-                result += $"{dp.DPNumber},";
+                result += $"{dp.DPNumber} ";
             }
 
-            return result.Trim(',');
+            return result.Trim(' ');
         }
     }
 }
