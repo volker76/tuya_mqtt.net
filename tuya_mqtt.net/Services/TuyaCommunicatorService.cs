@@ -686,23 +686,54 @@ namespace tuya_mqtt.net.Services
         private async Task<string> IdentifyLocal0D_DPs(TuyaDeviceInformation device)
         {
             string result = string.Empty;
-            byte increment = 5;
-            for (byte i = 1; i <= 255; i += increment)
+            byte increment = 10;
+            for (int i = 1; i <= 255; i += increment)  //loop over all possible DPs
             {
                 List<byte> testList = new List<byte>();
-                for (byte j = i; j < i + increment; j++)
+                int end = i + increment;
+                if (end > 255) end = 255; //do not exceed >255
+                for (int j = i; j < end; j++)
                 {
-                    testList.Add(j);
+                    if ((j is >= 1 and <= 30) || (j is >= 100 and <= 120)) // requesting a list of all DPs from 1 to 30 and 100 to 120
+                        testList.Add((byte)j);
                 }
-                var monitorList = await GetDPLocal0DAsync(device, testList);
-                await Task.Delay(500);
 
-                result += BuildDPList(monitorList) +",";
+                if (testList.Count > 0)
+                {
+                    for (int repeats = 0; repeats < 1; repeats++)
+                    {
+                        try
+                        {
+                            var monitorList = await GetDPLocal0DAsync(device, testList);
+                            var list = BuildDPList(monitorList);
+                            if (!string.IsNullOrEmpty(list))
+                            {
+                                result += list + " ";
+                            }
 
+                            break; //stop repeat cycle
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogWarning(e, $"error checking for DPs '{DumpList(testList)}' on device {device.ID}");
+                            await Task.Delay(100);
+                            //try again
+                        }
+                    }
+                }
             }
             
+            return result.Trim(' ');
+        }
 
-            return result.Trim(',');
+        private string DumpList(List<byte> itemList)
+        {
+            string result = string.Empty;
+            foreach (byte item in itemList)
+            {
+                result += $"{item} ";
+            }
+            return result.Trim();
         }
 
         private async Task<string> IdentifyLocal0A_DPs(TuyaDeviceInformation device)

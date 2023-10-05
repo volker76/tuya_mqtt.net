@@ -38,7 +38,7 @@ namespace tuya_mqtt.net.Data
     public class TuyaExtendedDeviceInformation : TuyaDeviceInformation
     {
         private string _name = String.Empty;
-        private bool _locked;
+        private bool _locked = false;
 
         public TuyaExtendedDeviceInformation()
         {
