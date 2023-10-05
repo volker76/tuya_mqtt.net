@@ -6,6 +6,9 @@ using System.Security.Cryptography;
 using JetBrains.Annotations;
 using MudBlazor;
 using Newtonsoft.Json.Linq;
+using static tuya_mqtt.net.Data.TuyaDeviceInformation;
+using System.Text.Json.Nodes;
+// ReSharper disable InconsistentNaming
 
 namespace tuya_mqtt.net.Services
 {
@@ -20,10 +23,10 @@ namespace tuya_mqtt.net.Services
 
         private readonly Timer _startupDelay;
 
-        // ReSharper disable once InconsistentNaming
+        
         private readonly TimeSpan TuyaDeviceExpired = TimeSpan.FromSeconds(30); //30 second constant
         private const int TuyaTimeout = 2000; //2000ms timeout
-        // ReSharper disable once InconsistentNaming
+        
         private readonly TimeSpan TuyaPropertyCacheExpiration = TimeSpan.FromHours(4);
 
         public event EventHandler<TuyaDeviceScanInfo>? OnTuyaScannerUpdate;
@@ -157,11 +160,18 @@ namespace tuya_mqtt.net.Services
 
         public async Task<List<DP>> TestConnect(TuyaDeviceInformation device)
         {
-            if (device.CommunicationType == TuyaDeviceInformation.DeviceType.Cloud)
-                return await TestConnectCloud(device);
-            else
-                return await TestConnectLocal(device);
-            
+            switch (device.CommunicationType)
+            {
+                case TuyaDeviceType.Cloud:
+                    return await TestConnectCloud(device);
+                case TuyaDeviceType.LocalTuya0A:
+                    return await TestConnectLocal0A(device);
+                case TuyaDeviceType.LocalTuya0D:
+                    return await TestConnectLocal0D(device);
+                default:
+                    throw new Exception("device type unknown");
+            }
+
         }
         private async Task<List<DP>> TestConnectCloud(TuyaDeviceInformation device)
         {
@@ -197,9 +207,9 @@ namespace tuya_mqtt.net.Services
             }
 
         }
-        private async Task<List<DP>> TestConnectLocal(TuyaDeviceInformation device)
+        private async Task<List<DP>> TestConnectLocal0A(TuyaDeviceInformation device)
         {
-            _logger.LogDebug($"TestConnect to {device.Address} ID:{device.ID} Key:{device.Key}");
+            _logger.LogDebug($"TestConnect (0A mode) to {device.Address} ID:{device.ID} Key:{device.Key}");
             if (string.IsNullOrEmpty(device.ID))
                 throw new ArgumentOutOfRangeException(nameof(device.ID), "ID cannot be empty");
             if (string.IsNullOrEmpty(device.Key))
@@ -238,18 +248,62 @@ namespace tuya_mqtt.net.Services
             }
         }
 
-        // ReSharper disable once InconsistentNaming
-        public async Task<List<DP>> GetDPAsync(TuyaDeviceInformation device)
+        private async Task<List<DP>> TestConnectLocal0D(TuyaDeviceInformation device)
         {
-            if (device.CommunicationType == TuyaDeviceInformation.DeviceType.Cloud)
-                return await GetDPCloudAsync(device);
-            else
-                return await GetDPLocalAsync(device);
-            
+            _logger.LogDebug($"TestConnect (0D mode) to {device.Address} ID:{device.ID} Key:{device.Key}");
+            if (string.IsNullOrEmpty(device.ID))
+                throw new ArgumentOutOfRangeException(nameof(device.ID), "ID cannot be empty");
+            if (string.IsNullOrEmpty(device.Key))
+                throw new ArgumentOutOfRangeException(nameof(device.Key), "Key cannot be empty");
+            try
+            {
+                var dev = new TuyaDevice(device.Address, device.Key.Trim(), device.ID.Trim(), device.ProtocolVersion);
+                var jsonIn = dev.FillJson("{\"dps\":{\"1\":null}}", true, true, true, true);
+                byte[] request = dev.EncodeRequest(TuyaCommand.CONTROL_NEW, jsonIn);
+
+                var t = dev.SendAsync(request);
+
+                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // no timeout 
+                {
+                    byte[] encryptedResponse = t.Result;
+                    TuyaLocalResponse response = dev.DecodeResponse(encryptedResponse);
+                    string json = response.JSON;
+                    _logger.LogDebug($"TestConnect to {device.Address} returned data set {json}");
+                    var list = DP.ParseLocalJSON(json);
+
+                    return list;
+                }
+                else
+                {
+                    throw new TimeoutException($"device: {device.Address} ID:{device.ID} did not respond in time");
+                }
+            }
+            catch (CryptographicException e)
+            {
+                throw new Exception($"Key does not work for this device. {e.Message}");
+            }
+            catch (Exception e)
+            {
+                throw new Exception(e.Message);
+            }
         }
 
-        // ReSharper disable once InconsistentNaming
-        private async Task<List<DP>> GetDPCloudAsync(TuyaDeviceInformation device)
+        public async Task<List<DP>> GetDPAsync(TuyaDeviceInformation device, List<byte> DPList)
+        {
+            switch (device.CommunicationType)
+            {
+                case TuyaDeviceType.Cloud:
+                    return await GetDPCloudAsync(device, DPList);
+                case TuyaDeviceType.LocalTuya0A:
+                    return await GetDPLocal0AAsync(device, DPList);
+                case TuyaDeviceType.LocalTuya0D:
+                    return await GetDPLocal0DAsync(device, DPList);
+                default:
+                    throw new Exception("invalid Communication type of device");
+            }
+        }
+
+        private async Task<List<DP>> GetDPCloudAsync(TuyaDeviceInformation device, List<byte>? DPList)
         {
             _logger.LogDebug($"Poll cloud data from ID:{device.ID}");
             if (string.IsNullOrEmpty(device.ID))
@@ -267,7 +321,7 @@ namespace tuya_mqtt.net.Services
                 if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // no timeout 
                 {
                     var json = t.Result;
-                    var list = DP.ParseCloudJSON(json);
+                    var list = DP.ParseCloudJSON(json, DPList);
 
                     return list;
                 }
@@ -285,8 +339,7 @@ namespace tuya_mqtt.net.Services
 
         }
 
-        // ReSharper disable once InconsistentNaming
-        private async Task<List<DP>> GetDPLocalAsync(TuyaDeviceInformation device)
+        private async Task<List<DP>> GetDPLocal0AAsync(TuyaDeviceInformation device, List<byte>? DPList)
         {
             _logger.LogDebug($"Poll data from {device.Address} ID:{device.ID} Key:{device.Key}");
             if (string.IsNullOrEmpty(device.ID))
@@ -307,7 +360,7 @@ namespace tuya_mqtt.net.Services
                     TuyaLocalResponse response = dev.DecodeResponse(encryptedResponse);
                     string json = response.JSON;
                     _logger.LogInformation($"Get DPs from {device.Address}'{device.ID}' returned data set {json}");
-                    var list = DP.ParseLocalJSON(json);
+                    var list = DP.ParseLocalJSON(json, DPList);
 
                     return list;
                 }
@@ -329,22 +382,81 @@ namespace tuya_mqtt.net.Services
                 throw new Exception(e.Message);
             }
         }
-        // ReSharper disable once InconsistentNaming
-        public async Task<List<DP>> SetDPAsync(TuyaDeviceInformation device, int dpNumber, string value)
+        private async Task<List<DP>> GetDPLocal0DAsync(TuyaDeviceInformation device, List<byte> DPList)
         {
-            if (device.CommunicationType == TuyaDeviceInformation.DeviceType.Cloud)
+            _logger.LogDebug($"Poll data from {device.Address} ID:{device.ID} Key:{device.Key}");
+            if (string.IsNullOrEmpty(device.ID))
+                throw new ArgumentOutOfRangeException(nameof(device.ID), "ID cannot be empty");
+            if (string.IsNullOrEmpty(device.Key))
+                throw new ArgumentOutOfRangeException(nameof(device.Key), "Key cannot be empty");
+            if (DPList.Count==0)
+                throw new ArgumentOutOfRangeException(nameof(DPList), "no monitored DPs specified");
+            try
+            {
+                var dev = new TuyaDevice(device.Address, device.Key.Trim(), device.ID.Trim(), device.ProtocolVersion);
+
+                string dparray = BuildDPJsonArray(DPList);
+                var jsonIn = dev.FillJson("{\"dps\":{"+dparray+"}}", true, true, true, true);
+
+                byte[] request = dev.EncodeRequest(TuyaCommand.CONTROL_NEW, jsonIn);
+
+                var t = dev.SendAsync(request);
+
+                if (await Task.WhenAny(t, Task.Delay(TuyaTimeout)) == t) // no timeout 
+                {
+                    byte[] encryptedResponse = t.Result;
+                    TuyaLocalResponse response = dev.DecodeResponse(encryptedResponse);
+                    string json = response.JSON;
+                    _logger.LogInformation($"Get DPs from {device.Address}'{device.ID}' returned data set {json}");
+                    var list = DP.ParseLocalJSON(json, DPList);
+
+                    return list;
+                }
+                else
+                {
+                    throw new TimeoutException($"device: {device.Address} ID:{device.ID} did not respond in time");
+                }
+            }
+            catch (CryptographicException e)
+            {
+                throw new Exception($"Key does not work for this device. {e.Message}");
+            }
+            catch (TimeoutException e)
+            {
+                throw new TimeoutException($"Timeout when reading device {device.ID} {e.Message}", e);
+            }
+            catch (Exception e)
+            {
+                throw new Exception(e.Message);
+            }
+        }
+
+        private string BuildDPJsonArray(List<byte> DPList)
+        {
+            string result = string.Empty;
+            foreach (byte dP in DPList)
+            {
+                result += $"\"{dP}\":null"+ ",";
+            }
+            return result.TrimEnd(','); //last "," to be removed
+        }
+
+        public async Task<List<DP>> SetDPAsync(TuyaDeviceInformation device, byte dpNumber, string value)
+        {
+            if (device.CommunicationType == TuyaDeviceInformation.TuyaDeviceType.Cloud)
             {
                 await SetDPCloudAsync(device, dpNumber, value);
                 await Task.Delay(100); 
-                return await GetDPCloudAsync(device);
+                List<byte>? DPs = new List<byte>(){dpNumber};
+                return await GetDPCloudAsync(device,DPs);
             }
             else
             {
                 return await SetDPLocalAsync(device, dpNumber, value);
             }
         }
-        // ReSharper disable once InconsistentNaming
-        private async Task SetDPCloudAsync(TuyaDeviceInformation device, int dpNumber, string value)
+
+        private async Task SetDPCloudAsync(TuyaDeviceInformation device, byte dpNumber, string value)
         {
             _logger.LogDebug($"Set data to {device.Address} ID:{device.ID} Key:{device.Key}");
             if (string.IsNullOrEmpty(device.ID))
@@ -386,7 +498,7 @@ namespace tuya_mqtt.net.Services
 
         }
 
-        private async Task<string> RequestDevicePropertyAsync(TuyaApi api, string deviceId, int dpNumber)
+        private async Task<string> RequestDevicePropertyAsync(TuyaApi api, string deviceId, byte dpNumber)
         {
             if (string.IsNullOrEmpty(deviceId))
                 throw new ArgumentOutOfRangeException(nameof(deviceId), "ID cannot be empty");
@@ -429,8 +541,7 @@ namespace tuya_mqtt.net.Services
 
         }
 
-        // ReSharper disable once InconsistentNaming
-        private async Task<List<DP>> SetDPLocalAsync(TuyaDeviceInformation device, int dpNumber, string value)
+        private async Task<List<DP>> SetDPLocalAsync(TuyaDeviceInformation device, byte dpNumber, string value)
         {
             _logger.LogDebug($"Set data to {device.Address} ID:{device.ID} Key:{device.Key}");
             if (string.IsNullOrEmpty(device.ID))
@@ -487,7 +598,6 @@ namespace tuya_mqtt.net.Services
             return value;
         }
 
-        // ReSharper disable once InconsistentNaming
         public async Task TestCloudAPIAsync(string apiKey, string apiSecret, TuyaApi.Region region)
         {
             try
@@ -551,6 +661,104 @@ namespace tuya_mqtt.net.Services
                 //don't throw any exception as the missing data can be entered manually also.
                 return new Tuple<bool, string, string>(false, localKey, deviceName);
             }
+        }
+
+        public async Task<string> IdentifyDPs(TuyaDeviceInformation device)
+        {
+            if (TuyaApiConfigured)
+            {
+                return await IdentifyCloudDPs(device);
+            }
+            switch (device.CommunicationType)
+            {
+                case TuyaDeviceType.Cloud:
+                    return await IdentifyCloudDPs(device);
+                case TuyaDeviceType.LocalTuya0A:
+                    return await IdentifyLocal0A_DPs(device);
+                case TuyaDeviceType.LocalTuya0D:
+                    return await IdentifyLocal0D_DPs(device);
+                default:
+                    throw new Exception("invalid Communication type of device");
+
+            }
+        }
+
+        private async Task<string> IdentifyLocal0D_DPs(TuyaDeviceInformation device)
+        {
+            string result = string.Empty;
+            byte increment = 10;
+            for (int i = 1; i <= 255; i += increment)  //loop over all possible DPs
+            {
+                List<byte> testList = new List<byte>();
+                int end = i + increment;
+                if (end > 255) end = 255; //do not exceed >255
+                for (int j = i; j < end; j++)
+                {
+                    if ((j is >= 1 and <= 30) || (j is >= 100 and <= 120)) // requesting a list of all DPs from 1 to 30 and 100 to 120
+                        testList.Add((byte)j);
+                }
+
+                if (testList.Count > 0)
+                {
+                    for (int repeats = 0; repeats < 1; repeats++)
+                    {
+                        try
+                        {
+                            var monitorList = await GetDPLocal0DAsync(device, testList);
+                            var list = BuildDPList(monitorList);
+                            if (!string.IsNullOrEmpty(list))
+                            {
+                                result += list + " ";
+                            }
+
+                            break; //stop repeat cycle
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogWarning(e, $"error checking for DPs '{DumpList(testList)}' on device {device.ID}");
+                            await Task.Delay(100);
+                            //try again
+                        }
+                    }
+                }
+            }
+            
+            return result.Trim(' ');
+        }
+
+        private string DumpList(List<byte> itemList)
+        {
+            string result = string.Empty;
+            foreach (byte item in itemList)
+            {
+                result += $"{item} ";
+            }
+            return result.Trim();
+        }
+
+        private async Task<string> IdentifyLocal0A_DPs(TuyaDeviceInformation device)
+        {
+            var list = await GetDPLocal0AAsync(device, null);
+
+            return BuildDPList(list);
+        }
+
+        private async Task<string> IdentifyCloudDPs(TuyaDeviceInformation device)
+        {
+            var list = await GetDPCloudAsync(device, null);
+
+            return BuildDPList(list);
+        }
+
+        private string BuildDPList(List<DP> list)
+        {
+            string result = string.Empty;
+            foreach (var dp in list)
+            {
+                result += $"{dp.DPNumber},";
+            }
+
+            return result.Trim(',');
         }
     }
 }

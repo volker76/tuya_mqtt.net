@@ -87,7 +87,7 @@ namespace tuya_mqtt.net.Services
                             {
                                 try
                                 {
-                                    List<DP> result = await tuyaservice.GetDPAsync(device);
+                                    List<DP> result = await tuyaservice.GetDPAsync(device, device.MonitoredDPs);
                                     _monitoredData?.Set(device.ID, new List<DP>(result),DataTimeout(device.PollingInterval));
 
                                     var topics = await mqttservice.PublishAsync(device.ID, device.Name, result);
@@ -232,9 +232,9 @@ namespace tuya_mqtt.net.Services
                     _monitoredDevices.Comparer);
             });
         }
-        public void AddDevice(TuyaDeviceInformation device, string name, TimeSpan pollingInterval)
+        public void AddDevice(TuyaDeviceInformation device, string name, TimeSpan pollingInterval, List<byte> DPList)
         {
-            var dev = new TuyaExtendedDeviceInformation(device, name, pollingInterval);
+            var dev = new TuyaExtendedDeviceInformation(device, name, pollingInterval, DPList);
             _monitoredDevices.AddOrUpdate(dev.ID, dev, (key, current) => dev);
             SaveOptions();
         }

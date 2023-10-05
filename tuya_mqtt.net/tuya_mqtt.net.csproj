@@ -36,6 +36,7 @@
 	<ItemGroup>
     <PackageReference Include="Abp" Version="8.3.1" />
     <PackageReference Include="Awesome.Net.WritableOptions" Version="3.0.0" />
+    <PackageReference Include="BlazorPro.BlazorSize" Version="6.2.2" />
     <PackageReference Include="Markdig" Version="0.32.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.4" />
     <PackageReference Include="Microsoft.Web.LibraryManager.Build" Version="2.1.175" />
