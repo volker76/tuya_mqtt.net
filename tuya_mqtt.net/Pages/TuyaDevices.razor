@@ -1,16 +1,14 @@
 ﻿@page "/tuyadevices"
 @using com.clusterrr.TuyaNet;
+@using static tuya_mqtt.net.Data.TuyaDeviceInformation;
 @using tuya_mqtt.net.Data
 @using tuya_mqtt.net.Services;
-@using tuya_mqtt.net.Helper;
 @inject TuyaCommunicatorService TuyaService;
 @inject TuyaConnectedDeviceService TuyaConnectedDevices;
 @inject NavigationManager NavManager
-@* ReSharper disable once InconsistentNaming *@
-@inject IJSRuntime JS;
 @inject ISnackbar Snackbar;
 @inject ILogger<TuyaDevices> Logger;
-@inject ILogger<BrowserService> BrowserServiceLogger;
+@inject IBrowserService Browser;
 
 
 <PageTitle>Tuya Devices</PageTitle>
@@ -49,9 +47,13 @@
                 </MudStack>
                 <MudStack Row="true" Class="align-top">
                     <MudTextField @bind-Value="_tuyaId" Label="Device ID" HelperText="Device ID" Variant="Variant.Text"></MudTextField>
-                    <MudSelect @bind-Value="_tuyaProtocolVersion" Disabled="@CloudMode" ToStringFunc="@ConverterProtocolVersion" T="TuyaProtocolVersion" Label="Protocol version" Style="width: 100px" Variant="Variant.Text">
+                    <MudSelect @bind-Value="_tuyaProtocolVersion" Disabled="@CloudMode" ToStringFunc="@ConverterProtocolVersion" T="TuyaProtocolVersion" Label="Protocol version" Style="width: 70px" Variant="Variant.Text">
                         <MudSelectItem Value="@(TuyaProtocolVersion.V31)"/>
                         <MudSelectItem Value="@(TuyaProtocolVersion.V33)"/>
+                    </MudSelect>
+                    <MudSelect @bind-Value="_tuyaDeviceType" Disabled="@CloudMode" ToStringFunc="@ConverterDeviceType" T="TuyaDeviceType" Label="DeviceType" Style="width: 70px" Variant="Variant.Text">
+                        <MudSelectItem Value="@(TuyaDeviceType.LocalTuya0A)" />
+                        <MudSelectItem Value="@(TuyaDeviceType.LocalTuya0D)" />
                     </MudSelect>
                 </MudStack>
 
@@ -94,11 +96,18 @@
                         <MudSelectItem Value="@t"></MudSelectItem>
                     }
                 </MudSelect>
+                <MudStack Row="true" Class="align-center">
+                    <MudTextField Class="mt-4" @bind-Value="_tuyaDps" Label="DP list" HelperText="Observed list of DPs" Variant="Variant.Text"></MudTextField>
 
+                    <MudTooltip Text="Cloud API require credentials defined">
+                        <MudButton Variant="Variant.Filled" Style="height: 40px" Color="Color.Primary" OnClick="IdentifyAllDPAsync">Identify DPs</MudButton>
+                    </MudTooltip>
+                    
+                </MudStack>
             </MudPaper>
             <MudPaper Elevation="0" Class="d-flex justify-end pt-5 ar-2">
                 <MudTooltip Text="Save device to monitored list">
-                    <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveAddTuyaDevice"/>
+                    <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveAddTuyaDeviceAsync"/>
                 </MudTooltip>
                 <MudTooltip Text="delete device from monitored list">
                     <MudFab Disabled="@(!_enableDelete)" Class="ml-4" Color="Color.Primary" StartIcon="@Icons.Material.Filled.DeleteSweep" OnClick="DeleteTuyaDevice" />
@@ -116,7 +125,6 @@
 @* ReSharper restore UnknownCssClass *@
 @code {
     private bool _cloudMode;
-    private BrowserService? _browser;
     private bool _isInWait;
     private MudExpansionPanel? _expansionList;
     private MudExpansionPanel? _expansionAdd;
@@ -126,14 +134,16 @@
     private IEnumerable<KeyValuePair<string, TuyaDeviceScanInfo>>? _tuyaScannedDevices;
     private IReadOnlyDictionary<string, TuyaExtendedDeviceInformation>? _tuyaMonitoredDevices;
     private IReadOnlyDictionary<string, List<DP>?>? _tuyaMonitoredData;
-    private TuyaProtocolVersion _tuyaProtocolVersion;
 
+    private TuyaProtocolVersion _tuyaProtocolVersion;
+    private TuyaDeviceType _tuyaDeviceType;
     private string _tuyaDeviceIp = string.Empty;
     private string _tuyaId = string.Empty;
     private string _tuyaLocalKey = string.Empty;
     private string _tuyaName = string.Empty;
+    private string _tuyaDps = string.Empty;
     private double _tuyaPolltimeValue = 10;
-    private bool _enableDelete = false;
+    private bool _enableDelete;
 
     private static string ConverterProtocolVersion(TuyaProtocolVersion p)
     {
@@ -149,6 +159,19 @@
         return "";
     }
 
+    private static string ConverterDeviceType(TuyaDeviceType dt)
+    {
+        switch (dt)
+        {
+            case TuyaDeviceType.LocalTuya0A:
+                return "Type 0A (default)";
+
+            case TuyaDeviceType.LocalTuya0D:
+                return "Type 0D";
+        }
+        return "";
+    }
+
     private static string ConvertTimeFunc(double t)
     {
         if (t>=1)
@@ -159,8 +182,8 @@
 
     protected override void OnInitialized()
     {
-        _browser = new BrowserService(BrowserServiceLogger);
         Snackbar.Clear();
+
         _tuyaScannedDevices = TuyaService.GetTuyaScanDevices();
         _tuyaMonitoredDevices = TuyaConnectedDevices.GetMonitoredDevices();
         _tuyaMonitoredData = TuyaConnectedDevices.GetMonitoredData();
@@ -169,11 +192,11 @@
 
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender)
         {
-            await _browser!.InitAsync(JS);
+
         }
     }
 
@@ -254,9 +277,11 @@
             {
                 _tuyaName = "";
             }
-            _cloudMode = _tuyaMonitoredDevices[id].CommunicationType == TuyaDeviceInformation.DeviceType.Cloud;
+            _cloudMode = _tuyaMonitoredDevices[id].CommunicationType == TuyaDeviceType.Cloud;
+            _tuyaDeviceType = _tuyaMonitoredDevices[id].CommunicationType;
             _tuyaProtocolVersion = _tuyaMonitoredDevices[id].ProtocolVersion;
             _tuyaPolltimeValue = _tuyaMonitoredDevices[id].PollingInterval.TotalSeconds;
+            _tuyaDps = _tuyaMonitoredDevices[id].MonitoredDPsString;
         }
         else
         {
@@ -266,14 +291,47 @@
             _tuyaProtocolVersion = pv;
             _tuyaPolltimeValue = 5; //5 seconds default
             _enableDelete = false;
+            _tuyaDps = String.Empty;
+            _tuyaDeviceType = TuyaDeviceType.LocalTuya0A; //this shall work in most of the cases
         }
 
         _expansionList?.Expand(false);
         _expansionAdd?.Expand();
         await InvokeAsync(StateHasChanged);
         await Task.Delay(500);
-        _browser!.ScrollClassIntoView("div.AddSection", 0).AndForget();
+        Browser!.ScrollClassIntoView("div.AddSection", 0).AndForget();
         await InvokeAsync(StateHasChanged);
+    }
+
+    // ReSharper disable once InconsistentNaming
+    private async Task IdentifyAllDPAsync()
+    {
+        try
+        {
+            _isInWait = true;
+            StateHasChanged();
+            await Task.Delay(100);
+
+            TuyaDeviceType comType = _tuyaDeviceType;
+            if (_cloudMode)
+                comType = TuyaDeviceType.Cloud;
+            var device = new TuyaDeviceInformation() { Address = _tuyaDeviceIp, ID = _tuyaId, Key = _tuyaLocalKey, ProtocolVersion = _tuyaProtocolVersion, CommunicationType = comType };
+
+            var response = await TuyaService.IdentifyDPs(device);
+
+            Snackbar.Add($"{response} identified", Severity.Success);
+            _tuyaDps = response;
+        }
+        catch (Exception e)
+        {
+            Logger.LogWarning(e, $"Error executing DP search for {_tuyaDeviceIp}");
+            Snackbar.Add($"Error executing DP search <p>{e.Message}</p>", Severity.Error);
+        }
+        finally
+        {
+            _isInWait = false;
+            StateHasChanged();
+        }
     }
 
     // ReSharper disable once InconsistentNaming
@@ -319,9 +377,9 @@
             _isInWait = true;
             StateHasChanged();
             await Task.Delay(100);
-            TuyaDeviceInformation.DeviceType comType = TuyaDeviceInformation.DeviceType.LocalTuya;
+            TuyaDeviceType comType = _tuyaDeviceType;
             if (_cloudMode)
-                comType = TuyaDeviceInformation.DeviceType.Cloud;
+                comType = TuyaDeviceType.Cloud;
             var device = new TuyaDeviceInformation() { Address = _tuyaDeviceIp, ID = _tuyaId, Key = _tuyaLocalKey, ProtocolVersion=_tuyaProtocolVersion, CommunicationType = comType };
 
             var response = await TuyaService.TestConnect(device);
@@ -349,7 +407,7 @@
         }
     }
 
-    private async Task DeleteTuyaDevice()
+    private void DeleteTuyaDevice()
     {
         try
         {
@@ -373,7 +431,33 @@
         }
     }
 
-    private async Task SaveAddTuyaDevice()
+    // ReSharper disable once InconsistentNaming
+    private bool ParseDPList(string list, out List<byte> DPlist, out string error)
+    {
+        error = String.Empty;
+        DPlist = new List<byte>();
+        var separatedList = list.Split(" ,;:".ToCharArray()); //split the list by ',' ';' ':' and <space>
+        foreach (var item in separatedList)
+        {
+            if (!string.IsNullOrEmpty(item.Trim()))
+            {
+                var success = byte.TryParse(item, out var DP);
+                if (!success)
+                {
+                    error = item;
+                    return false; // this went wrong and we cannot create the list
+                }
+                else
+                {
+                    DPlist.Add(DP);
+                }
+            }
+        }
+        DPlist.Distinct().ToList().Sort();
+        return true;
+    }
+
+    private async Task SaveAddTuyaDeviceAsync()
     {
         if (_tuyaPolltimeValue <= 0)
         {
@@ -381,14 +465,30 @@
             await Task.Delay(100);
             return;
         }
+
+        List<byte> DPlist;
+        if (!ParseDPList(_tuyaDps, out DPlist, out var errorLocation))
+        {
+            Snackbar.Add($"DP list cannot be read, error at '{errorLocation}'", Severity.Error);
+            await Task.Delay(100);
+            return;
+        }
+
+        if (_tuyaDeviceType == TuyaDeviceType.LocalTuya0D && DPlist.Count == 0)
+        {
+            Snackbar.Add($"device type 0D requires a list of DPs to be specified", Severity.Error);
+            await Task.Delay(100);
+            return;
+        }
+
         try
         {
             _isInWait = true;
             StateHasChanged();
 
-            TuyaDeviceInformation.DeviceType comType = TuyaDeviceInformation.DeviceType.LocalTuya;
+            TuyaDeviceType comType = _tuyaDeviceType;
             if (_cloudMode)
-                comType = TuyaDeviceInformation.DeviceType.Cloud;
+                comType = TuyaDeviceType.Cloud;
 
             var device = new TuyaDeviceInformation() { Address = _tuyaDeviceIp, 
                 ID = _tuyaId, 
@@ -399,9 +499,9 @@
             
             _ = await TuyaService.TestConnect(device);
 
-            TuyaConnectedDevices.AddDevice(device, _tuyaName, TimeSpan.FromSeconds(_tuyaPolltimeValue));
+            TuyaConnectedDevices.AddDevice(device, _tuyaName, TimeSpan.FromSeconds(_tuyaPolltimeValue), DPlist);
 
-            Snackbar.Add($"Device saved", Severity.Success);
+            Snackbar.Add("Device saved", Severity.Success);
         }
         catch (Exception e)
         {
