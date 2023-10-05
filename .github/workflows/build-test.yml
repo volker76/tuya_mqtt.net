@@ -3,15 +3,8 @@ env:
   IMAGE_NAME: volkerhaensel/${{ github.event.repository.name }}
   REGISTRY: docker.io
 on:
-  workflow_dispatch:
   push:
-  
-env:
-  # Use docker.io for Docker Hub if empty
-  REGISTRY: docker.io
-  # github.repository as <account>/<repo>
-  IMAGE_NAME: volkerhaensel/${{ github.event.repository.name }}
-
+  workflow_dispatch:
 
 jobs:
   build:
