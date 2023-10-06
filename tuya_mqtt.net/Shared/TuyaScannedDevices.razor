@@ -31,11 +31,15 @@
                                 <MudItem xs="2" Class="d-flex justify-center">
                                     @if (ContainsMonitoredDevices(d.Value.GwId))
                                     {
-                                        <MudFab StartIcon="@Icons.Material.Outlined.ChangeCircle" Size="Size.Small" Tag="1" OnClick="() => { ClickAddChangeButton(d.Value).AndForget(); }"/>
+                                        <MudTooltip Text="change device settings">
+                                            <MudFab StartIcon="@Icons.Material.Outlined.ChangeCircle" Size="Size.Small" Tag="1" OnClick="() => { ClickAddChangeButton(d.Value).AndForget(); }"/>
+                                        </MudTooltip>
                                     }
                                     else
                                     {
-                                        <MudFab StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Tag="1" OnClick="() => { ClickAddChangeButton(d.Value).AndForget(); }"/>
+                                        <MudTooltip Text="connect device">
+                                            <MudFab StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Tag="1" OnClick="() => { ClickAddChangeButton(d.Value).AndForget(); }"/>
+                                        </MudTooltip>
                                     }
                                     
                                 </MudItem>

@@ -26,22 +26,16 @@
                                             <MudText Style="justify-self: start;">@context.Value.Title</MudText>
                                         </MudTooltip>
 
-                                        @* <MudIconButton Style="justify-self: end;" Icon="@Icons.Material.Filled.Edit" OnClick="@(() => { ClickChangeButton(item.ID).AndForget(); })" OnSize="Size.Medium" Color="Color.Inherit" />*@
-                                        <MudFab IconSize="Size.Medium" Style="justify-self: end;" StartIcon="@Icons.Material.Outlined.ChangeCircle" Size="Size.Small" Tag="1" OnClick="@(() => { ClickChangeButton(item.ID).AndForget(); })" />
-
+                                        <MudTooltip Text="change device settings">
+                                            <MudFab IconSize="Size.Medium" Style="justify-self: end;" StartIcon="@Icons.Material.Outlined.ChangeCircle" Size="Size.Small" Tag="1" OnClick="@(() => { ClickChangeButton(item.ID).AndForget(); })" />
+                                        </MudTooltip>
                                     }
                                     else
                                     {
                                         <MudTooltip Text="@context.Value.Address">
                                             <MudText Style="justify-self: start;">@context.Value.Title</MudText>
                                         </MudTooltip>
-                                        <MudStack Row="true">
-                                            <MudText Style="">@context.Value.Value</MudText>
-
-                                            @*<MudIconButton Style="justify-self: end;" Icon="@Icons.Material.Filled.Edit" OnClick="@(() => { ClickChangeButton(item.ID).AndForget(); })" OnSize="Size.Medium" Color="Color.Inherit" />
-                                    <MudFab IconSize="Size.Medium" Style="justify-self: end;" StartIcon="@Icons.Material.Outlined.ChangeCircle" Size="Size.Small" Tag="1" OnClick="@(() => { ClickChangeButton(item.ID).AndForget(); })" />*@
-
-                                        </MudStack> 
+                                        <MudText Style="color:gray">@context.Value.Value</MudText>
                                     }
                                 </div>
                             </BodyContent>
