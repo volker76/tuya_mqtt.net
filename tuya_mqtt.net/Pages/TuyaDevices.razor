@@ -129,7 +129,7 @@
     private MudExpansionPanel? _expansionList;
     private MudExpansionPanel? _expansionAdd;
 
-    private readonly double[] _timeList = { 500,1,2,5,10,30,60 };
+    private readonly double[] _timeList = { 0.5,1,2,5,10,30,60 };
 
     private IEnumerable<KeyValuePair<string, TuyaDeviceScanInfo>>? _tuyaScannedDevices;
     private IReadOnlyDictionary<string, TuyaExtendedDeviceInformation>? _tuyaMonitoredDevices;
@@ -289,7 +289,7 @@
             _tuyaLocalKey = localKey;
             _tuyaName = name;
             _tuyaProtocolVersion = pv;
-            _tuyaPolltimeValue = 5; //5 seconds default
+            _tuyaPolltimeValue = 10; //10 seconds default
             _enableDelete = false;
             _tuyaDps = String.Empty;
             _tuyaDeviceType = TuyaDeviceType.LocalTuya0A; //this shall work in most of the cases
