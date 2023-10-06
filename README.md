@@ -21,7 +21,7 @@ In general all TUYA devices shall be supported.
 The fundamental intention has been using the devices through the localTuya library.
 Battery driven sensors are not supported as those do not offer a local port. To use those devices in the same way, there is a implementation to poll those data points over the cloud access.
 
-So Tuya cloud AccessKey is nice, but not a must.
+Having a Tuya cloud AccessKey is nice, but not a must.
 
 ## used other github projects
 implements a MQTT Client (based on [MQTTnet](https://github.com/dotnet/MQTTnet))
