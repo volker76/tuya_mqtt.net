@@ -121,7 +121,7 @@ namespace tuya_mqtt.net.Services
 
             if (_mqttClient?.IsConnected == true)
             {
-                _autoReconnect = GlobalOptions.MtqqReconnect;
+                _autoReconnect = GlobalOptions.MqttReconnect;
 
                 if (Options.MqttPort > 0)
                     _logger.LogInformation($"MQTT client connected to {Options.MqttHost}:{Options.MqttPort}");

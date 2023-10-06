@@ -2,7 +2,7 @@
 {
     public class GlobalOptions
     {
-        public bool MtqqReconnect { get; set; } = true;
+        public bool MqttReconnect { get; set; } = true;
         public int ExceptionsHealthDegraded { get; set; } = 10; //>10 Exceptions per minute = degraded
         public int ExceptionsUnhealthy { get; set; } = 40; //>40 Exceptions per minute = unhealthy
 
