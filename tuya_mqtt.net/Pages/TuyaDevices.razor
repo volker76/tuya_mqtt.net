@@ -37,8 +37,8 @@
             <MudPaper>
                 
                 <MudToggleIconButton @bind-Toggled="@CloudMode" Disabled="@ApiDisabled"
-                                     Icon="@Icons.Material.Filled.Cloud" Color="@Color.Primary" Title="Cloud"
-                                     ToggledIcon="@Icons.Material.Filled.Lan" ToggledColor="@Color.Primary" ToggledTitle="Local"/>
+                                     Icon="@Icons.Material.Filled.Lan" Color="@Color.Primary" Title="Switch to Cloud"
+                                     ToggledIcon="@Icons.Material.Filled.Cloud" ToggledColor="@Color.Primary" ToggledTitle="Switch to Local"/>
                 <span>@(CloudMode ? "Cloud Mode" : "Local Mode")</span>
 
                 <MudStack Row="true" Class="align-center">
@@ -109,7 +109,7 @@
                 <MudTooltip Text="Save device to monitored list">
                     <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveAddTuyaDeviceAsync"/>
                 </MudTooltip>
-                <MudTooltip Text="delete device from monitored list">
+                <MudTooltip Text="Delete device from monitored list">
                     <MudFab Disabled="@(!_enableDelete)" Class="ml-4" Color="Color.Primary" StartIcon="@Icons.Material.Filled.DeleteSweep" OnClick="DeleteTuyaDevice" />
                 </MudTooltip>
             </MudPaper>
@@ -129,7 +129,7 @@
     private MudExpansionPanel? _expansionList;
     private MudExpansionPanel? _expansionAdd;
 
-    private readonly double[] _timeList = { 500,1,2,5,10,30,60 };
+    private readonly double[] _timeList = { 0.5,1,2,5,10,30,60 };
 
     private IEnumerable<KeyValuePair<string, TuyaDeviceScanInfo>>? _tuyaScannedDevices;
     private IReadOnlyDictionary<string, TuyaExtendedDeviceInformation>? _tuyaMonitoredDevices;
@@ -289,7 +289,7 @@
             _tuyaLocalKey = localKey;
             _tuyaName = name;
             _tuyaProtocolVersion = pv;
-            _tuyaPolltimeValue = 5; //5 seconds default
+            _tuyaPolltimeValue = 10; //10 seconds default
             _enableDelete = false;
             _tuyaDps = String.Empty;
             _tuyaDeviceType = TuyaDeviceType.LocalTuya0A; //this shall work in most of the cases

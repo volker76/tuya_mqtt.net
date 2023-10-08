@@ -7,7 +7,7 @@
 @inject ILogger<Settings> Logger
 @inject IWritableOptions<MqttClientOptions> Mqttdata
 @inject IWritableOptions<TuyaCommunicatorOptions> Tuyadata
-@inject MqttClientService Client;
+@inject MqttClientService _mqttClient;
 @inject TuyaCommunicatorService TuyaService;
 @inject ISnackbar Snackbar
 
@@ -78,7 +78,7 @@
                 <MudSwitch @bind-Checked="_mqttV5" Label="MQTT v5" onH Color="Color.Primary"/>
             </MudTooltip>
             <MudTooltip Text="allow packet fragmentation">
-                <MudSwitch @bind-Checked="_mqttNoFragmentation" Label="Packet fagmentation" Color="Color.Primary"/>
+                <MudSwitch @bind-Checked="_mqttNoFragmentation" Label="Packet fragmentation" Color="Color.Primary"/>
             </MudTooltip>
             <MudTextField @bind-Value="_mqttTopic" Label="Topic" HelperText="MQTT Main Topic" Variant="Variant.Text"></MudTextField>
         </MudPaper>
@@ -222,7 +222,7 @@
 
             _isInWait = true;
             StateHasChanged();
-            var result = await Client.TestAsync(options);
+            var result = await _mqttClient.TestAsync(options);
             if (result)
             {
                 Snackbar.Add("Connected to MQTT broker", Severity.Success);
@@ -278,7 +278,23 @@
             opt.TuyaAPIRegion = TuyaApiRegion;
         });
 
-        Snackbar.Add("Settings saved", Severity.Success);
+        if (!_mqttClient.IsConnected) //try reconnect if not connected
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await _mqttClient.ReconnectMqttBrokerAsync();
+                }
+                catch
+                {
+                    //suppress errors
+                }
+            }).AndForget();
+            ;
+        }
+
+    Snackbar.Add("Settings saved", Severity.Success);
     }
 
 
