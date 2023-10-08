@@ -88,7 +88,7 @@ namespace tuya_mqtt.net.Services
             }
         }
 
-        private async Task ReconnectMqttBrokerAsync()
+        public async Task ReconnectMqttBrokerAsync()
         {
             Dispose();
 
