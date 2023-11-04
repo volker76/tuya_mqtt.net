@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
+FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
 ENV DOTNET_CLI_HOME=/tmp
 WORKDIR /app
 EXPOSE 80
@@ -14,7 +14,7 @@ RUN if [ "$DEBUGHELPER" = "yes" ] ; then \
     apt install -y arping inetutils-ping libnet-ifconfig-wrapper-perl mc \
     ; fi
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
 COPY ["tuya_mqtt.net.csproj", "."]
 ENV DOTNET_CLI_HOME=/tmp
@@ -39,7 +39,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     && echo $GIT_COMMIT >> "/src/Resources/BuildDate.txt" \
     && dotnet build "tuya_mqtt.net.csproj" --self-contained false -r $RID -c Release -o /app/build
 
-FROM --platform=$BUILDPLATFORM build AS publish
+FROM --platform=$TARGETPLATFORM build AS publish
 ARG BUILDPLATFORM
 ARG TARGETPLATFORM
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
