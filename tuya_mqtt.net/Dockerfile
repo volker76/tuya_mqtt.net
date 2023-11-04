@@ -66,7 +66,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     && echo $GIT_COMMIT >> "/src/Resources/BuildDate.txt" \
     && dotnet build "tuya_mqtt.net.csproj" -r $RID --no-restore  -c Release -o /app/build
 
-FROM --platform=$TARGETPLATFORM build AS publish
+FROM --platform=$BUILDPLATFORM build AS publish
 ARG DEBUGHELPER
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -97,4 +97,4 @@ FROM --platform=$TARGETPLATFORM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-ENTRYPOINT ["dotnet", "tuya_mqtt.net.dll"]
+# ENTRYPOINT ["dotnet", "tuya_mqtt.net.dll"]
