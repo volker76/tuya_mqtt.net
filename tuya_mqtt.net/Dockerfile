@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
+FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
 ARG DEBUGHELPER
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -26,7 +26,7 @@ RUN if [ "$DEBUGHELPER" = "yes" ] ; then \
     ; fi
 
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 ARG DEBUGHELPER
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -48,10 +48,7 @@ RUN dotnet --info
 COPY . .
 WORKDIR "/src/."
 
-RUN echo "Building on $BUILDPLATFORM, targeting $TARGETPLATFORM" \
-	&& echo "Building on ${BUILDOS} and ${BUILDARCH} with optional variant ${BUILDVARIANT}" \
-	&& echo "Targeting ${TARGETOS} and ${TARGETARCH} with optional variant ${TARGETVARIANT}" \
-	&& if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
 		RID=linux-x64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
 		RID=linux-arm64 ; \
@@ -60,12 +57,16 @@ RUN echo "Building on $BUILDPLATFORM, targeting $TARGETPLATFORM" \
     elif [ "$TARGETPLATFORM" = "linux/arm/v6" ]; then \
 		RID=linux-arm ; \
     fi \
+	&& echo "Building on $BUILDPLATFORM, targeting $TARGETPLATFORM" \
+	&& echo "Building on ${BUILDOS} and ${BUILDARCH} with optional variant ${BUILDVARIANT}" \
+	&& echo "Targeting ${TARGETOS} and ${TARGETARCH} with optional variant ${TARGETVARIANT}" \
+	&& echo "RID is ${RID}" \
 	&& dotnet restore -r $RID  "tuya_mqtt.net.csproj" \
     && date > "/src/Resources/BuildDate.txt" \
     && echo $GIT_COMMIT >> "/src/Resources/BuildDate.txt" \
-    && dotnet build "tuya_mqtt.net.csproj" --no-restore --self-contained true -r $RID -c Release -o /app/build
+    && dotnet build "tuya_mqtt.net.csproj" --no-restore -r $RID -c Release -o /app/build
 
-FROM --platform=$BUILDPLATFORM build AS publish
+FROM --platform=$TARGETPLATFORM build AS publish
 ARG DEBUGHELPER
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -86,9 +87,13 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     elif [ "$TARGETPLATFORM" = "linux/arm/v6" ]; then \
 		RID=linux-arm ; \
     fi \
-    && dotnet publish "tuya_mqtt.net.csproj" --self-contained true -r $RID -c Release --no-restore -o /app/publish /p:UseAppHost=false
+	&& echo "Publishing on $BUILDPLATFORM, targeting $TARGETPLATFORM" \
+	&& echo "Publishing on ${BUILDOS} and ${BUILDARCH} with optional variant ${BUILDVARIANT}" \
+	&& echo "Targeting ${TARGETOS} and ${TARGETARCH} with optional variant ${TARGETVARIANT}" \
+	&& echo "RID is ${RID}" \
+    && dotnet publish "tuya_mqtt.net.csproj" -r $RID -c Release --no-restore -o /app/publish /p:UseAppHost=false
 
-FROM --platform=$TARGETARCH base AS final
+FROM --platform=$TARGETPLATFORM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
