@@ -85,7 +85,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
       #    cache-from: type=gha
       #    cache-to: type=gha,mode=max
-          platforms: linux/arm64,linux/amd64,linux/arm/v7,linux/arm/v6
+          platforms: linux/arm64,linux/amd64,linux/arm/v7
           build-args: |
             GIT_COMMIT=${{ steps.ghd.outputs.describe }}
 
