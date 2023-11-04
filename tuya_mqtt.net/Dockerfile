@@ -37,7 +37,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     && echo "target $TARGETPLATFORM build $BUILDPLATFORM RID $RID" \
     && date > "/src/Resources/BuildDate.txt" \
     && echo $GIT_COMMIT >> "/src/Resources/BuildDate.txt" \
-    && dotnet build "tuya_mqtt.net.csproj" -r $RID -c Release -o /app/build
+    && dotnet build "tuya_mqtt.net.csproj" --self-contained false -r $RID -c Release -o /app/build
 
 FROM --platform=$BUILDPLATFORM build AS publish
 ARG BUILDPLATFORM
@@ -52,7 +52,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
 		RID=linux-arm ; \
     fi \
     && echo "target $TARGETPLATFORM build $BUILDPLATFORM RID $RID" \
-    && dotnet publish "tuya_mqtt.net.csproj" -r $RID -c Release -o /app/publish /p:UseAppHost=false
+    && dotnet publish "tuya_mqtt.net.csproj" --self-contained false -r $RID -c Release -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
