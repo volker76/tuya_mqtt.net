@@ -97,4 +97,4 @@ FROM --platform=$TARGETPLATFORM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# ENTRYPOINT ["dotnet", "tuya_mqtt.net.dll"]
+ENTRYPOINT ["dotnet", "tuya_mqtt.net.dll"]
