@@ -61,10 +61,10 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
 	&& echo "Building on ${BUILDOS} and ${BUILDARCH} with optional variant ${BUILDVARIANT}" \
 	&& echo "Targeting ${TARGETOS} and ${TARGETARCH} with optional variant ${TARGETVARIANT}" \
 	&& echo "RID is ${RID}" \
-	&& dotnet restore -r $RID  "tuya_mqtt.net.csproj" \
+	&& dotnet restore  "tuya_mqtt.net.csproj" \
     && date > "/src/Resources/BuildDate.txt" \
     && echo $GIT_COMMIT >> "/src/Resources/BuildDate.txt" \
-    && dotnet build "tuya_mqtt.net.csproj" --no-restore -r $RID -c Release -o /app/build
+    && dotnet build "tuya_mqtt.net.csproj" --no-restore  -c Release -o /app/build
 
 FROM --platform=$TARGETPLATFORM build AS publish
 ARG DEBUGHELPER
@@ -91,7 +91,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
 	&& echo "Publishing on ${BUILDOS} and ${BUILDARCH} with optional variant ${BUILDVARIANT}" \
 	&& echo "Targeting ${TARGETOS} and ${TARGETARCH} with optional variant ${TARGETVARIANT}" \
 	&& echo "RID is ${RID}" \
-    && dotnet publish "tuya_mqtt.net.csproj" -r $RID -c Release --no-restore -o /app/publish /p:UseAppHost=false
+    && dotnet publish "tuya_mqtt.net.csproj"  -c Release --no-restore -o /app/publish /p:UseAppHost=false
 
 FROM --platform=$TARGETPLATFORM base AS final
 WORKDIR /app
