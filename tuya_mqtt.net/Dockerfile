@@ -18,6 +18,7 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
 COPY ["tuya_mqtt.net.csproj", "."]
 ENV DOTNET_CLI_HOME=/tmp
+RUN dotnet --info
 RUN dotnet restore "tuya_mqtt.net.csproj"
 COPY . .
 WORKDIR "/src/."
@@ -25,30 +26,30 @@ ARG BUILDPLATFORM
 ARG TARGETPLATFORM
 ARG GIT_COMMIT
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
-    RID=linux-x64 ; \
+		RID=linux-x64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
-    RID=linux-arm64 ; \
+		RID=linux-arm64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
-    RID=linux-arm ; \
+		RID=linux-arm ; \
     elif [ "$TARGETPLATFORM" = "linux/arm/v6" ]; then \
-    RID=linux-arm ; \
+		RID=linux-arm ; \
     fi \
     && echo "target $TARGETPLATFORM build $BUILDPLATFORM RID $RID" \
     && date > "/src/Resources/BuildDate.txt" \
     && echo $GIT_COMMIT >> "/src/Resources/BuildDate.txt" \
     && dotnet build "tuya_mqtt.net.csproj" -r $RID -c Release -o /app/build
 
-FROM build AS publish
+FROM --platform=$BUILDPLATFORM build AS publish
 ARG BUILDPLATFORM
 ARG TARGETPLATFORM
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
-    RID=linux-x64 ; \
+		RID=linux-x64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
-    RID=linux-arm64 ; \
+		RID=linux-arm64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
-    RID=linux-arm ; \
+		RID=linux-arm ; \
     elif [ "$TARGETPLATFORM" = "linux/arm/v6" ]; then \
-    RID=linux-arm ; \
+		RID=linux-arm ; \
     fi \
     && echo "target $TARGETPLATFORM build $BUILDPLATFORM RID $RID" \
     && dotnet publish "tuya_mqtt.net.csproj" -r $RID -c Release -o /app/publish /p:UseAppHost=false
