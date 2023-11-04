@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/nightly/aspnet:8.0 AS base
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/nightly/aspnet:8.0 AS base
 ENV DOTNET_CLI_HOME=/tmp
 WORKDIR /app
 EXPOSE 80
@@ -16,7 +16,7 @@ RUN if [ "$DEBUGHELPER" = "yes" ] ; then \
     ; fi
 
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/nightly/sdk:8.0 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/nightly/sdk:8.0-preview AS build
 WORKDIR /src
 
 COPY ["tuya_mqtt.net.csproj", "."]
