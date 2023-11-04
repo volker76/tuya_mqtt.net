@@ -63,7 +63,7 @@ RUN echo "Building on $BUILDPLATFORM, targeting $TARGETPLATFORM" \
 	&& dotnet restore -r $RID  "tuya_mqtt.net.csproj" \
     && date > "/src/Resources/BuildDate.txt" \
     && echo $GIT_COMMIT >> "/src/Resources/BuildDate.txt" \
-    && dotnet build "tuya_mqtt.net.csproj" --no-restore --self-contained false -r $RID -c Release -o /app/build
+    && dotnet build "tuya_mqtt.net.csproj" --no-restore --self-contained true -r $RID -c Release -o /app/build
 
 FROM --platform=$BUILDPLATFORM build AS publish
 ARG DEBUGHELPER
@@ -86,7 +86,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     elif [ "$TARGETPLATFORM" = "linux/arm/v6" ]; then \
 		RID=linux-arm ; \
     fi \
-    && dotnet publish "tuya_mqtt.net.csproj" --self-contained false -r $RID -c Release --no-restore -o /app/publish /p:UseAppHost=false
+    && dotnet publish "tuya_mqtt.net.csproj" --self-contained true -r $RID -c Release --no-restore -o /app/publish /p:UseAppHost=false
 
 FROM --platform=$TARGETARCH base AS final
 WORKDIR /app
