@@ -1,4 +1,4 @@
-FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
+FROM --platform=$TARGETPLATFORM mcr.microsoft.com/nightly/aspnet:7.0 AS base
 ARG DEBUGHELPER
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -26,7 +26,7 @@ RUN if [ "$DEBUGHELPER" = "yes" ] ; then \
     ; fi
 
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/nightly/sdk:7.0 AS build
 ARG DEBUGHELPER
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -66,7 +66,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     && echo $GIT_COMMIT >> "/src/Resources/BuildDate.txt" \
     && dotnet build "tuya_mqtt.net.csproj" -r $RID --no-restore  -c Release -o /app/build
 
-FROM --platform=$BUILDPLATFORM build AS publish
+FROM --platform=$TARGETPLATFORM build AS publish
 ARG DEBUGHELPER
 ARG TARGETPLATFORM
 ARG TARGETOS
