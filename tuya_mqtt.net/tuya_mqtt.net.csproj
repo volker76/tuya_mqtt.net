@@ -9,6 +9,7 @@
 	  <DockerfileContext>..</DockerfileContext>
 	  <DockerComposeProjectPath>../docker-compose.dcproj</DockerComposeProjectPath>
 	  <ScopedCssEnabled>true</ScopedCssEnabled>
+	  <AAARuntimeIdentifier>linux-x64;linux-arm64;linux-arm;</AAARuntimeIdentifier>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
