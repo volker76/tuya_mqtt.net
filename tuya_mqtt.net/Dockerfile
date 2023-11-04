@@ -91,7 +91,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
 	&& echo "Publishing on ${BUILDOS} and ${BUILDARCH} with optional variant ${BUILDVARIANT}" \
 	&& echo "Targeting ${TARGETOS} and ${TARGETARCH} with optional variant ${TARGETVARIANT}" \
 	&& echo "RID is ${RID}" \
-    && dotnet publish "tuya_mqtt.net.csproj" -r $RID -c Release --no-restore -o /app/publish /p:UseAppHost=false
+    && dotnet publish "tuya_mqtt.net.csproj" -r $RID --self-contained false -c Release --no-restore -o /app/publish /p:UseAppHost=false
 
 FROM --platform=$TARGETPLATFORM base AS final
 WORKDIR /app
