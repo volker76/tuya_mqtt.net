@@ -16,7 +16,7 @@ RUN if [ "$DEBUGHELPER" = "yes" ] ; then \
     ; fi
 
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/nightly/sdk:8.0-preview AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/nightly/sdk:8.0 AS build
 WORKDIR /src
 
 COPY ["tuya_mqtt.net.csproj", "."]
